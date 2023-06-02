@@ -1,0 +1,21 @@
+{
+    "name": "games.noio.planter",
+    "version": "0.1.1",
+    "displayName": "Planter",
+    "description": "The plant growing simulation from Cloud Gardens as an Editor package",
+    "unity": "2022.2",
+    "unityRelease": "0b5",
+    "dependencies": {},
+    "keywords": [
+        "Build"
+    ],
+    "author": {
+        "name": "Thomas van den Berg",
+        "email": "thomas@noio.nl",
+        "url": "https://noio.games"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/noio/games.noio.planter.git"
+    }
+}
