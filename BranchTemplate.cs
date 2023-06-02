@@ -131,7 +131,7 @@ namespace games.noio.planter
             }
         }
 
-        public GameObject Make(int variant)
+        public GameObject CreateInstance(int variant)
         {
             Assert.IsTrue(_preprocessed, $"{name} has not been Preprocessed");
 

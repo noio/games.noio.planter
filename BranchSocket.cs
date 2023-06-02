@@ -65,6 +65,7 @@ namespace games.noio.planter
             var allBranches = AssetDatabase.FindAssets("t:GameObject")
                                            .Select(AssetDatabase.GUIDToAssetPath)
                                            .Select(AssetDatabase.LoadAssetAtPath<BranchTemplate>)
+                                           .Where(bt=>bt != null)
                                            .ToList();
             var branchesOfSamePlant = allBranches
                                       .Where(d => d.name.StartsWith(namePrefix))
