@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace games.noio.planter
 {
+    [CreateAssetMenu(menuName="Noio/Planter/Plant Definition")]
     public class PlantDefinition : ScriptableObject
     {
         #region PUBLIC AND SERIALIZED FIELDS

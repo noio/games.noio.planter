@@ -18,11 +18,9 @@ namespace games.noio.planter
         [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
         public int DepthMin;
 
-        public int DepthMax;
-
         [TitleGroup("Shape")]
-        public int MaxCount = 100;
-
+        public int DepthMax = 12;
+        [TitleGroup("Shape")] public int MaxCount = 100;
 #if UNITY_EDITOR
         [CustomValueDrawer(nameof(MaxQuotaPercentage))]
 #endif
@@ -36,18 +34,12 @@ namespace games.noio.planter
                  "this type of branch can grow")]
         public int MinTotalOtherBranches;
 
-
         [TitleGroup("Shape")]
-        [Tooltip("How much of the plant's FruitEnergy does this branch consume when growing." +
-                 "This is equal to the energy that a fruit gives when collected")]
-        [GUIColor(nameof(FruitColor))]
-        public int FruitEnergyCostInt;
-
 
         [TitleGroup("Shape")]
         [HorizontalGroup("Shape/Avoid")]
         [Tooltip("The plant will not grow through colliders on these layers")]
-        public LayerMask Avoids;
+        public LayerMask Avoids = 1;
 
         [TitleGroup("Shape")]
         [HorizontalGroup("Shape/Avoid", Width = 50)]
@@ -55,50 +47,39 @@ namespace games.noio.planter
         [Tooltip("Remove branches if they overlap objects on the avoided layers")]
         public bool RemoveIfOverlaps = true;
 
-        [TitleGroup("Shape")]
-        public bool NeedsSurface;
+        [TitleGroup("Shape")] public bool NeedsSurface;
 
         [TitleGroup("Shape")]
         [EnableIf(nameof(NeedsSurface))]
-        public LayerMask Surface;
+        public LayerMask Surface = 1;
 
         [TitleGroup("Shape")]
         [EnableIf(nameof(NeedsSurface))]
         [Range(.2f, 1)]
         public float SurfaceDistance = 1;
 
-        [BoxGroup("Shape/Orientation")]
-        public bool MakeHorizontal;
+        [BoxGroup("Shape/Orientation")] public bool MakeHorizontal;
 
         [Range(0, 180)]
         [HorizontalGroup("Shape/Orientation/Angles")]
-        public float MaxPivotAngle;
+        public float MaxPivotAngle = 30;
 
         [Range(0, 180)]
         [HorizontalGroup("Shape/Orientation/Angles")]
-        public float MaxRollAngle;
+        public float MaxRollAngle = 30;
 
         [Range(-1, 1)]
         [HorizontalGroup("Shape/Orientation/Angles")]
         public float VerticalBias;
 
-        [Title("Visuals")]
-        public float GrowTime = 0.75f;
-
+        [Title("Visuals")] public float GrowTime = 0.75f;
         public Mesh[] MeshVariants;
-
 
         #endregion
 
-        [SerializeField]
-        [ReadOnly]
-        [PropertyOrder(-1)]
-        uint _databaseId;
-
+        [SerializeField] [ReadOnly] [PropertyOrder(-1)] uint _databaseId;
         Renderer _renderer;
-
         CapsuleCollider _capsuleCollider;
-
         bool _preprocessed;
 
         #region PROPERTIES
@@ -124,9 +105,6 @@ namespace games.noio.planter
             set => _databaseId = value;
         }
 
-        public bool IsFruit { get; private set; }
-
-        Color FruitColor() => FruitEnergyCostInt > 0 ? new Color(1f, 0.69f, 0.98f) : Color.white;
 
         #endregion
 
@@ -157,7 +135,7 @@ namespace games.noio.planter
                 // The object is already an instance, so materials etc. are already correct
                 // this call to Apply below is only to set a  _variation_
                 var instance = PrefabUtility.InstantiatePrefab(gameObject);
-                created = (GameObject) instance;
+                created = (GameObject)instance;
                 if (MeshVariants.Length > 0)
                 {
                     var meshFilter = created.GetComponent<MeshFilter>();
@@ -168,7 +146,7 @@ namespace games.noio.planter
             else
 #endif
             {
-                created = new GameObject {name = name, layer = gameObject.layer};
+                created = new GameObject { name = name, layer = gameObject.layer };
 
                 if (MeshVariants.Length > 0)
                 {
@@ -187,7 +165,6 @@ namespace games.noio.planter
                 newCapsuleCollider.radius = Capsule.radius;
                 newCapsuleCollider.direction = Capsule.direction;
                 newCapsuleCollider.sharedMaterial = Capsule.sharedMaterial;
-
             }
 
             return created;
@@ -216,7 +193,6 @@ namespace games.noio.planter
                 }
             }
 
-            IsFruit = FruitEnergyCostInt > 0;
         }
 
         #region EDITOR
@@ -233,8 +209,9 @@ namespace games.noio.planter
             }
         }
 
-        public bool IsCapsuleColliderCentered => Mathf.Abs(Capsule.height - Capsule.center.z * 2) < 0.0001f &&
-                                                 ((Vector2)Capsule.center).sqrMagnitude < 0.0001f;
+        public bool ValidateCapsuleCollider => Capsule.direction == 2 && 
+                                               Mathf.Abs(Capsule.height - Capsule.center.z * 2) < 0.0001f &&
+                                               ((Vector2)Capsule.center).sqrMagnitude < 0.0001f;
 
         public void SetSocketsVisible(bool visible)
         {
@@ -255,6 +232,7 @@ namespace games.noio.planter
 
         [PropertyOrder(-1)]
         [TitleGroup("Branching", "Which branches will grow out of this branch, and where")]
+
         // [HorizontalGroup("Branching/Sockets")]
         [EnableIf(nameof(HasSockets))]
         [Button(ButtonSizes.Large, Name = "@" + nameof(ToggleSocketsButtonName))]
@@ -266,7 +244,8 @@ namespace games.noio.planter
             _preprocessed = false;
         }
 
-        string ToggleSocketsButtonName => AnySocketVisible() ? "Hide Sockets before Applying Prefab" : "Show Sockets";
+        string ToggleSocketsButtonName =>
+            AnySocketVisible() ? "Hide Sockets before Applying Prefab" : "Show Sockets";
 
         Color ToggleSocketsColor => AnySocketVisible() ? new Color(1f, 0.65f, 0.53f) : Color.white;
 
@@ -304,7 +283,7 @@ namespace games.noio.planter
             go.transform.SetParent(transform, false);
             go.transform.localPosition = Vector3.forward;
             var socket = go.AddComponent<BranchSocket>();
-            socket.BranchOptions = new List<BranchTemplate> {this};
+            socket.BranchOptions = new List<BranchTemplate> { this };
             socket.OnBranchOptionsChanged();
         }
 
@@ -340,17 +319,17 @@ namespace games.noio.planter
 
         [TitleGroup("Actions")]
         [GUIColor(1, .56f, .49f)]
-        [HideIf(nameof(IsCapsuleColliderCentered))]
+        [HideIf(nameof(ValidateCapsuleCollider))]
         [Button]
         void FixCapsuleColliderPosition()
         {
             if (Capsule != null)
             {
+                Capsule.direction = 2;
                 var center = new Vector3(0, 0, Capsule.height / 2);
                 Capsule.center = center;
             }
         }
-
 
 #endif
 
