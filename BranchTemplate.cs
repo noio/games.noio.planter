@@ -18,8 +18,7 @@ namespace games.noio.planter
         [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
         public int DepthMin;
 
-        [TitleGroup("Shape")]
-        public int DepthMax = 12;
+        [TitleGroup("Shape")] public int DepthMax = 12;
         [TitleGroup("Shape")] public int MaxCount = 100;
 #if UNITY_EDITOR
         [CustomValueDrawer(nameof(MaxQuotaPercentage))]
@@ -35,7 +34,6 @@ namespace games.noio.planter
         public int MinTotalOtherBranches;
 
         [TitleGroup("Shape")]
-
         [TitleGroup("Shape")]
         [HorizontalGroup("Shape/Avoid")]
         [Tooltip("The plant will not grow through colliders on these layers")]
@@ -105,7 +103,6 @@ namespace games.noio.planter
             set => _databaseId = value;
         }
 
-
         #endregion
 
         #region MONOBEHAVIOUR METHODS
@@ -122,6 +119,18 @@ namespace games.noio.planter
 
         #endregion
 
+        public Mesh GetMeshVariant(int variant)
+        {
+            if (MeshVariants.Length == 0)
+            {
+                return GetComponent<MeshFilter>().sharedMesh;
+            }
+            else
+            {
+                return MeshVariants[variant % MeshVariants.Length];
+            }
+        }
+
         public GameObject Make(int variant)
         {
             Assert.IsTrue(_preprocessed, $"{name} has not been Preprocessed");
@@ -136,10 +145,10 @@ namespace games.noio.planter
                 // this call to Apply below is only to set a  _variation_
                 var instance = PrefabUtility.InstantiatePrefab(gameObject);
                 created = (GameObject)instance;
+                var meshFilter = created.GetComponent<MeshFilter>();
                 if (MeshVariants.Length > 0)
                 {
-                    var meshFilter = created.GetComponent<MeshFilter>();
-                    meshFilter.sharedMesh = MeshVariants[variant % MeshVariants.Length];
+                    meshFilter.sharedMesh = GetMeshVariant(variant);
                 }
             }
 
@@ -147,12 +156,8 @@ namespace games.noio.planter
 #endif
             {
                 created = new GameObject { name = name, layer = gameObject.layer };
-
-                if (MeshVariants.Length > 0)
-                {
-                    var meshFilter = created.GetComponent<MeshFilter>();
-                    meshFilter.sharedMesh = MeshVariants[variant % MeshVariants.Length];
-                }
+                var meshFilter = created.AddComponent<MeshFilter>();
+                meshFilter.sharedMesh = GetMeshVariant(variant);
 
                 var newRenderer = created.AddComponent<MeshRenderer>();
                 newRenderer.sharedMaterials = _renderer.sharedMaterials;
@@ -192,7 +197,6 @@ namespace games.noio.planter
                     Sockets.Add(socket);
                 }
             }
-
         }
 
         #region EDITOR
@@ -209,7 +213,7 @@ namespace games.noio.planter
             }
         }
 
-        public bool ValidateCapsuleCollider => Capsule.direction == 2 && 
+        public bool ValidateCapsuleCollider => Capsule.direction == 2 &&
                                                Mathf.Abs(Capsule.height - Capsule.center.z * 2) < 0.0001f &&
                                                ((Vector2)Capsule.center).sqrMagnitude < 0.0001f;
 

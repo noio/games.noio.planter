@@ -38,7 +38,6 @@ namespace games.noio.planter
         [ReadOnly] public Transform RootTransform;
         public PlantDefinition Definition;
 
-
         #endregion
 
         readonly SortedList<uint, Branch> _branches = new SortedList<uint, Branch>();
@@ -65,14 +64,11 @@ namespace games.noio.planter
         [ShowIf(nameof(Initialized))]
         public int Energy { get; private set; }
 
-        
-
         /// <summary>
         ///     The number of fruits is subtracted from the energy cap, because
         ///     that energy is stored inside the fruit, if it were.
         /// </summary>
         public int MaxStoredEnergy => Definition.MaxStoredEnergyInt;
-
 
         public bool AllSocketsFilled => AnyOpenSocketsLeft == false;
         public bool AllowGrowAnimation { get; set; } = true;
@@ -91,7 +87,6 @@ namespace games.noio.planter
         [ShowIf(nameof(Initialized))]
         public int FailedGrowAttempts { get; private set; }
 
-        
         int MaxGrowAttempts => Definition.MaxGrowAttempts;
         bool AnyOpenSocketsLeft => GrowableBranchTypeMask > 0 && _openSockets.Count > 0;
 
@@ -122,15 +117,11 @@ namespace games.noio.planter
         /// </summary>
         void OnEnable()
         {
-
-            
         }
-        
 
         #endregion
-        
 
-        public void InitWithRootNodeOnly()
+        public void Clear()
         {
             DisableRootPlaceholderRenderer();
             Preprocess();
@@ -188,7 +179,7 @@ namespace games.noio.planter
              *   grow regular branches.
              */
             var remainingEnergyUntilFull = Mathf.Max(0, MaxStoredEnergy - Energy);
-            
+
             /*
              * Add the rest to regular energy
              */
@@ -203,7 +194,6 @@ namespace games.noio.planter
         {
             Energy = amount;
         }
-        
 
         void Preprocess()
         {
@@ -241,7 +231,7 @@ namespace games.noio.planter
             var rootNode = Definition.RootNode;
             var layers = rootNode.Avoids ^ (1 << rootNode.gameObject.layer);
             if (Physics.SphereCast(rayOrigin, rootNode.Capsule.radius, rayDirection, out var hitInfo, 5,
-                layers))
+                    layers))
             {
                 _settleHitPoint = hitInfo.point;
                 _settleHitNormal = hitInfo.normal;
@@ -256,53 +246,6 @@ namespace games.noio.planter
             }
 
             return false;
-        }
-
-        void UpdateGrowAnimation(float deltaTime)
-        {
-            const int maxAnimatingBranches = 10;
-            if (_animatingBranches.Count < maxAnimatingBranches && _hasInvisibleOrAnimatingBranches)
-            {
-                var allBranchesFullyGrown = true;
-                foreach (var pair in _branches)
-                {
-                    var branch = pair.Value;
-                    if (branch.GrowProgress <= 0)
-                    {
-                        var address = pair.Key;
-                        allBranchesFullyGrown = false;
-                        if (address == RootAddress || _branches[GetParentAddress(address)].GrowProgress >= 1)
-                        {
-                            _animatingBranches.Add(branch);
-                            
-                            if (_animatingBranches.Count >= maxAnimatingBranches)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                // If we reached the end of the iteration above, then there are no more invisible nodes,
-                // So the variable is set to false
-                if (_animatingBranches.Count == 0 && allBranchesFullyGrown)
-                {
-                    _hasInvisibleOrAnimatingBranches = false;
-                }
-            }
-
-            for (var i = _animatingBranches.Count - 1; i >= 0; i--)
-            {
-                var branch = _animatingBranches[i];
-                /*
-                 * introduce some random grow time based on the place in the array
-                 */
-                branch.GrowProgress += deltaTime / (branch.Template.GrowTime * 1 + i * .2f);
-                if (branch.GrowProgress >= 1)
-                {
-                    _animatingBranches.RemoveAt(i);
-                }
-            }
         }
 
         void ShowAllBranchesImmediately()
@@ -361,7 +304,6 @@ namespace games.noio.planter
             var cache = new BranchTypeCache(template, 1 << _branchTypes.Count);
 
             _branchTypes.Add(template.DatabaseId, cache);
-
 
             foreach (var socket in template.Sockets)
             {
@@ -532,60 +474,7 @@ namespace games.noio.planter
             var clear = CheckIfAreaClear(position, rotation, rootNode, false);
             return clear;
         }
-
-        /// <summary>
-        ///     Attempt growing and update the animations
-        /// </summary>
-        /// <param name="maxGrowAttempts"></param>
-        /// <returns></returns>
-        public void GrowAndUpdateAnimation(int maxGrowAttempts)
-        {
-            Assert.IsTrue(Initialized);
-
-            if (_hasInvisibleOrAnimatingBranches)
-            {
-                if (AllowGrowAnimation)
-                {
-                    UpdateGrowAnimation(Time.deltaTime);
-                }
-            }
-
-            // else
-            // {
-            var attempts = Mathf.Min(MaxGrowAttempts, maxGrowAttempts);
-
-            if (FullyGrown == false && Energy >= Definition.EnergyPerBranchInt)
-            {
-                Grow(attempts, out _);
-            }
-
-            if (_hasInvisibleOrAnimatingBranches == false &&
-                FullyGrown &&
-                UsingMergedMesh == false)
-            {
-                // CreateOrUpdateMergedMesh();
-            }
-        }
         
-
-        /// <summary>
-        /// Opposite of <see cref="CreateOrUpdateMergedMesh"/>, switches this plant
-        /// back to use individual meshes for each branch.
-        /// </summary>
-        void SwitchToIndividualBranchMeshes()
-        {
-            if (UsingMergedMesh)
-            {
-                _mergedMeshRenderer.enabled = false;
-                DestroyImmediate(_mergedMeshFilter.sharedMesh, true);
-                _mergedMeshFilter.sharedMesh = null;
-
-                foreach (var kvp in _branches)
-                {
-                    kvp.Value.Renderer.enabled = true;
-                }
-            }
-        }
 
         /// <summary>
         ///     Try for a number of attempts to find a node to grow
@@ -622,13 +511,14 @@ namespace games.noio.planter
             branch = null;
             return false;
         }
-        
+
         public static Quaternion RotateAroundZ(float zRad)
         {
             // float rollOver2 = 0;
             var halfAngle = zRad * 0.5f;
             var sinAngle = Mathf.Sin(halfAngle);
             var cosAngle = Mathf.Cos(halfAngle);
+
             // float yawOver2 = 0;
 
             return new Quaternion(
@@ -638,16 +528,15 @@ namespace games.noio.planter
                 cosAngle
             );
         }
-        
+
         public static int NumberOfSetBits(uint i)
         {
             // Java: use int, and use >>> instead of >>
             // C or C++: use uint32_t
             i = i - ((i >> 1) & 0x55555555);
             i = (i & 0x33333333) + ((i >> 2) & 0x33333333);
-            return (int) ((((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24);
+            return (int)((((i + (i >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24);
         }
-
 
         Branch FindBranchToGrow()
         {
@@ -801,7 +690,6 @@ namespace games.noio.planter
         {
             GrowthBlocked = false;
             FailedGrowAttempts = 0;
-            SwitchToIndividualBranchMeshes();
         }
 
         void AddOpenSocketsFor(uint address, Branch branch, bool checkForExisting = false)
@@ -1073,7 +961,6 @@ namespace games.noio.planter
             _animatingBranches.Clear();
         }
 
-
         #endregion
 
         #region MODIFICATION
@@ -1130,7 +1017,7 @@ namespace games.noio.planter
             address = 0;
             return false;
         }
-        
+
         public static uint FastHash(uint a)
         {
             a = a ^ 61 ^ (a >> 16);
@@ -1140,7 +1027,6 @@ namespace games.noio.planter
             a = a ^ (a >> 15);
             return a;
         }
-
 
         void AddBranch(uint address, Branch branch)
         {
@@ -1363,7 +1249,6 @@ namespace games.noio.planter
         }
 
         #endregion
-        
 
         #region EDITOR_ACTIONS
 
@@ -1477,7 +1362,7 @@ namespace games.noio.planter
         {
             if (Initialized == false)
             {
-                InitWithRootNodeOnly();
+                Clear();
                 Debug.Log($"Initialized <b>{name}</b>");
                 /*
                  * Root node is added, but hidden.
@@ -1485,7 +1370,10 @@ namespace games.noio.planter
                 ShowAllBranchesImmediately();
             }
 
-            GrowInEditor(200);
+            for (int i = 0; i < 10; i++)
+            {
+                GrowInEditor(200);
+            }
         }
 
         /// <summary>
@@ -1540,7 +1428,7 @@ namespace games.noio.planter
                  */
                 if (SettleStep())
                 {
-                    InitWithRootNodeOnly();
+                    Clear();
                 }
 
                 return false;
@@ -1548,7 +1436,6 @@ namespace games.noio.planter
 
             return true;
         }
-
 
         [BoxGroup("Status/Status", false)]
         [PropertyOrder(0)]
@@ -1576,7 +1463,6 @@ namespace games.noio.planter
 
             using (new EditorGUI.DisabledScope(true))
             {
-
                 EditorGUILayout.IntField("Total Branches", _branches.Count);
                 EditorGUILayout.IntField("Open Sockets", _openSockets.Count);
             }

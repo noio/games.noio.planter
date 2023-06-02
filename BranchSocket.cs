@@ -53,9 +53,7 @@ namespace games.noio.planter
 
                 var firstOption = BranchOptions[0];
     
-                // TODO make mesh variants method on branch template
-                // meshFilter.sharedMesh = firstOption.MeshVariants.Get(0);
-
+                meshFilter.sharedMesh = firstOption.GetMeshVariant(0);
                 meshRenderer.sharedMaterials = firstOption.GetComponent<MeshRenderer>().sharedMaterials;
             }
         }
