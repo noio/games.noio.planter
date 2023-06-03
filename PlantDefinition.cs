@@ -1,4 +1,4 @@
-using Sirenix.OdinInspector;
+// using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
@@ -9,17 +9,17 @@ namespace games.noio.planter
     {
         #region PUBLIC AND SERIALIZED FIELDS
 
-        [TitleGroup("Placement")]
-        [AssetSelector(FlattenTreeView = false, Paths = "Assets/Content/Plants")]
+        // [TitleGroup("Placement")]
+        // [AssetSelector(FlattenTreeView = false, Paths = "Assets/Content/Plants")]
         public BranchTemplate RootNode;
 
-        [Range(0, 90)] [HideIf(nameof(UsingOdin))] public float MinPlantTilt;
-        [Range(0, 180)] [HideIf(nameof(UsingOdin))] public float MaxPlantTilt = 180;
-        [TitleGroup("Visuals")] public Color ColorA;
-        public Color ColorB;
+        // [Range(0, 90)] [HideIf(nameof(UsingOdin))] 
+        public float MinPlantTilt;
+        // [Range(0, 180)] [HideIf(nameof(UsingOdin))] 
+        public float MaxPlantTilt = 180;
 
-        [TitleGroup("Growth")]
-        [PropertyRange(0, nameof(MaxStoredEnergyInt))]
+        // [TitleGroup("Growth")]
+        // [PropertyRange(0, nameof(MaxStoredEnergyInt))]
         [Tooltip("How much energy is consumed by growing a single branch")]
         public int EnergyPerBranchInt = 100;
 
@@ -27,9 +27,9 @@ namespace games.noio.planter
 
         #region PROPERTIES
 
-        [TitleGroup("Placement", Order = 0)]
-        [ShowInInspector]
-        [MinMaxSlider(0, 180, true)]
+        // [TitleGroup("Placement", Order = 0)]
+        // [ShowInInspector]
+        // [MinMaxSlider(0, 180, true)]
         public Vector2 TiltRange
         {
             get => new Vector2(MinPlantTilt, MaxPlantTilt);

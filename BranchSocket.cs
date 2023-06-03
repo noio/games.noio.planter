@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Sirenix.OdinInspector;
+// using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,8 +12,8 @@ namespace games.noio.planter
         #region PUBLIC FIELDS
 
 #if UNITY_EDITOR
-        [OnValueChanged(nameof(OnBranchOptionsChanged))]
-        [ListDrawerSettings(CustomAddFunction = nameof(AddBranchOption), Expanded = true)]
+        // [OnValueChanged(nameof(OnBranchOptionsChanged))]
+        // [ListDrawerSettings(CustomAddFunction = nameof(AddBranchOption), Expanded = true)]
 #endif
         public List<BranchTemplate> BranchOptions;
 

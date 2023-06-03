@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-using Sirenix.OdinInspector;
-using Sirenix.Utilities.Editor;
+// using Sirenix.OdinInspector;
+// using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -15,67 +15,68 @@ namespace games.noio.planter
         #region PUBLIC FIELDS
 
         [FormerlySerializedAs("NodeDepth")]
-        [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
+        // [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
         public int DepthMin;
 
-        [TitleGroup("Shape")] public int DepthMax = 12;
-        [TitleGroup("Shape")] public int MaxCount = 100;
-#if UNITY_EDITOR
-        [CustomValueDrawer(nameof(MaxQuotaPercentage))]
-#endif
-        [TitleGroup("Shape")]
+        // [TitleGroup("Shape")]
+        public int DepthMax = 12;
+        // [TitleGroup("Shape")]
+        public int MaxCount = 100;
+// #if UNITY_EDITOR
+        // [CustomValueDrawer(nameof(MaxQuotaPercentage))]
+// #endif
+        // [TitleGroup("Shape")]
         [Tooltip("How much of the plant can be made up of this type of branch")]
         public float Quota = 1;
 
-        [FormerlySerializedAs("MinTotalOtherBranches2")]
-        [TitleGroup("Shape")]
+        // [TitleGroup("Shape")]
         [Tooltip("How many ohter branches (of any type) should the plant have, before" +
                  "this type of branch can grow")]
         public int MinTotalOtherBranches;
 
-        [TitleGroup("Shape")]
-        [TitleGroup("Shape")]
-        [HorizontalGroup("Shape/Avoid")]
+        // [TitleGroup("Shape")]
+        // [TitleGroup("Shape")]
+        // [HorizontalGroup("Shape/Avoid")]
         [Tooltip("The plant will not grow through colliders on these layers")]
         public LayerMask Avoids = 1;
 
-        [TitleGroup("Shape")]
-        [HorizontalGroup("Shape/Avoid", Width = 50)]
-        [ToggleLeft]
+        // [TitleGroup("Shape")]
+        // [HorizontalGroup("Shape/Avoid", Width = 50)]
+        // [ToggleLeft]
         [Tooltip("Remove branches if they overlap objects on the avoided layers")]
         public bool RemoveIfOverlaps = true;
 
-        [TitleGroup("Shape")] public bool NeedsSurface;
+        // [TitleGroup("Shape")]
+        public bool NeedsSurface;
 
-        [TitleGroup("Shape")]
-        [EnableIf(nameof(NeedsSurface))]
+        // [TitleGroup("Shape")]
+        // [EnableIf(nameof(NeedsSurface))]
         public LayerMask Surface = 1;
 
-        [TitleGroup("Shape")]
-        [EnableIf(nameof(NeedsSurface))]
+        // [TitleGroup("Shape")]
+        // [EnableIf(nameof(NeedsSurface))]
         [Range(.2f, 1)]
         public float SurfaceDistance = 1;
 
-        [BoxGroup("Shape/Orientation")] public bool MakeHorizontal;
+        // [BoxGroup("Shape/Orientation")]
+        public bool MakeHorizontal;
 
         [Range(0, 180)]
-        [HorizontalGroup("Shape/Orientation/Angles")]
+        // [HorizontalGroup("Shape/Orientation/Angles")]
         public float MaxPivotAngle = 30;
 
         [Range(0, 180)]
-        [HorizontalGroup("Shape/Orientation/Angles")]
+        // [HorizontalGroup("Shape/Orientation/Angles")]
         public float MaxRollAngle = 30;
 
         [Range(-1, 1)]
-        [HorizontalGroup("Shape/Orientation/Angles")]
+        // [HorizontalGroup("Shape/Orientation/Angles")]
         public float VerticalBias;
 
-        [Title("Visuals")] public float GrowTime = 0.75f;
         public Mesh[] MeshVariants;
 
         #endregion
 
-        [SerializeField] [ReadOnly] [PropertyOrder(-1)] uint _databaseId;
         Renderer _renderer;
         CapsuleCollider _capsuleCollider;
         bool _preprocessed;
@@ -97,11 +98,6 @@ namespace games.noio.planter
             }
         }
 
-        public uint DatabaseId
-        {
-            get => _databaseId;
-            set => _databaseId = value;
-        }
 
         #endregion
 
@@ -234,13 +230,13 @@ namespace games.noio.planter
         //     }
         // }
 
-        [PropertyOrder(-1)]
-        [TitleGroup("Branching", "Which branches will grow out of this branch, and where")]
+        // [PropertyOrder(-1)]
+        // [TitleGroup("Branching", "Which branches will grow out of this branch, and where")]
 
         // [HorizontalGroup("Branching/Sockets")]
-        [EnableIf(nameof(HasSockets))]
-        [Button(ButtonSizes.Large, Name = "@" + nameof(ToggleSocketsButtonName))]
-        [GUIColor(nameof(ToggleSocketsColor))]
+        // [EnableIf(nameof(HasSockets))]
+        // [Button(ButtonSizes.Large, Name = "@" + nameof(ToggleSocketsButtonName))]
+        // [GUIColor(nameof(ToggleSocketsColor))]
         void ToggleSockets()
         {
             var visi = AnySocketVisible() == false;
@@ -253,8 +249,8 @@ namespace games.noio.planter
 
         Color ToggleSocketsColor => AnySocketVisible() ? new Color(1f, 0.65f, 0.53f) : Color.white;
 
-        [HorizontalGroup("Branching/Sockets")]
-        [OnInspectorGUI]
+        // [HorizontalGroup("Branching/Sockets")]
+        // [OnInspectorGUI]
         void DrawBranchInfo()
         {
             if (Selection.gameObjects.Length == 1)
@@ -269,7 +265,7 @@ namespace games.noio.planter
                             {
                                 GUILayout.Label(socket.name, GUILayout.Width(80));
                                 var branches = string.Join(", ", socket.BranchOptions.Select(o => o.name));
-                                GUILayout.Label(branches, SirenixGUIStyles.BoldLabel);
+                                // GUILayout.Label(branches, SirenixGUIStyles.BoldLabel);
                             }
                         }
                     }
@@ -277,9 +273,9 @@ namespace games.noio.planter
             }
         }
 
-        [HorizontalGroup("Branching/Sockets", Width = 100)]
-        [VerticalGroup("Branching/Sockets/Buttons")]
-        [Button(ButtonSizes.Large, Name = "Add Socket")]
+        // [HorizontalGroup("Branching/Sockets", Width = 100)]
+        // [VerticalGroup("Branching/Sockets/Buttons")]
+        // [Button(ButtonSizes.Large, Name = "Add Socket")]
         void CreateSocket()
         {
             SetSocketsVisible(true);
@@ -291,9 +287,9 @@ namespace games.noio.planter
             socket.OnBranchOptionsChanged();
         }
 
-        [ShowIf(nameof(AnySocketVisible))]
-        [VerticalGroup("Branching/Sockets/Buttons")]
-        [Button(Name = "Refresh")]
+        // [ShowIf(nameof(AnySocketVisible))]
+        // [VerticalGroup("Branching/Sockets/Buttons")]
+        // [Button(Name = "Refresh")]
         void RefreshSocketsPreviewMesh()
         {
             Undo.RecordObject(gameObject, "Refresh Sockets");
@@ -321,10 +317,10 @@ namespace games.noio.planter
             return false;
         }
 
-        [TitleGroup("Actions")]
-        [GUIColor(1, .56f, .49f)]
-        [HideIf(nameof(ValidateCapsuleCollider))]
-        [Button]
+        // [TitleGroup("Actions")]
+        // [GUIColor(1, .56f, .49f)]
+        // [HideIf(nameof(ValidateCapsuleCollider))]
+        // [Button]
         void FixCapsuleColliderPosition()
         {
             if (Capsule != null)

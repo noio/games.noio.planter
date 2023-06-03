@@ -2,11 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
-using Sirenix.OdinInspector;
-using Sirenix.Utilities.Editor;
+// using Sirenix.OdinInspector;
+// using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 // ReSharper disable Unity.InefficientPropertyAccess
@@ -32,14 +33,19 @@ namespace games.noio.planter
 
         #region PUBLIC AND SERIALIZED FIELDS
 
-        [ReadOnly] public Transform RootTransform;
-        public PlantDefinition Definition;
+        // [ReadOnly] 
+        public Transform RootTransform;
+        [FormerlySerializedAs("Definition")] [SerializeField] PlantDefinition _definition;
 
         #endregion
 
-        SortedList<uint, Branch> _branches = new();
-        Queue<(uint Address, int Mask)> _openSockets = new();
+        List<Branch> _branches = new();
+
+        // Queue<(uint Address, int Mask)> _openSockets = new();
+        Queue<Branch> _branchesWithOpenSockets = new();
         List<BranchType> _branchTypes = new();
+        List<BranchType> _growableBranchTypes;
+        int _nextSocketIndex;
         Vector3 _settledPosition;
 
         #region PROPERTIES
@@ -47,18 +53,18 @@ namespace games.noio.planter
         public int Variant { get; private set; }
         public bool Initialized { get; private set; }
 
-        [TitleGroup("Status")]
-        [ShowInInspector]
-        [PropertyOrder(1)]
-        [ProgressBar(0, nameof(MaxStoredEnergy), 0.62f, 1f, 0.45f)]
-        [ShowIf(nameof(Initialized))]
+        // [TitleGroup("Status")]
+        // [ShowInInspector]
+        // [PropertyOrder(1)]
+        // [ProgressBar(0, nameof(MaxStoredEnergy), 0.62f, 1f, 0.45f)]
+        // [ShowIf(nameof(Initialized))]
         public int Energy { get; private set; }
 
         /// <summary>
         ///     The number of fruits is subtracted from the energy cap, because
         ///     that energy is stored inside the fruit, if it were.
         /// </summary>
-        public int MaxStoredEnergy => Definition.MaxStoredEnergyInt;
+        public int MaxStoredEnergy => _definition.MaxStoredEnergyInt;
 
         public bool AllSocketsFilled => AnyOpenSocketsLeft == false;
         public bool AllowGrowAnimation { get; set; } = true;
@@ -70,28 +76,24 @@ namespace games.noio.planter
         /// </summary>
         public bool FullyGrown => AllSocketsFilled || GrowthBlocked;
 
-        [TitleGroup("Status")]
-        [ShowInInspector]
-        [PropertyOrder(2)]
-        [ProgressBar(-10, nameof(MaxGrowAttempts), 0.95f, 0.68f, 0.37f)]
-        [ShowIf(nameof(Initialized))]
+        // [TitleGroup("Status")]
+        // [ShowInInspector]
+        // [PropertyOrder(2)]
+        // [ProgressBar(-10, nameof(MaxGrowAttempts), 0.95f, 0.68f, 0.37f)]
+        // [ShowIf(nameof(Initialized))]
         public int FailedGrowAttempts { get; private set; }
 
-        int MaxGrowAttempts => Definition.MaxGrowAttempts;
-        bool AnyOpenSocketsLeft => GrowableBranchTypeMask > 0 && _openSockets?.Count > 0;
+        int MaxGrowAttempts => _definition.MaxGrowAttempts;
+
+        bool AnyOpenSocketsLeft => (_branchTypes?.Any(bt => bt.Growable) ?? false) &&
+                                   _branchesWithOpenSockets?.Count > 0;
 
         /// <summary>
         ///     A mask indicating which branch types
         ///     can currently be grown
         /// </summary>
-        int GrowableBranchTypeMask
-        {
-            get;
 
-            // var bits = Convert.ToString(value, 2).PadLeft(8, '0');
-            // Debug.Log($"F{Time.frameCount} Open Socket Bits: {bits}");
-            set;
-        }
+        // int GrowableBranchTypeMask { get; set; }
 
         #endregion
 
@@ -104,11 +106,14 @@ namespace games.noio.planter
             DisableRootPlaceholderRenderer();
 
             _branchTypes = new List<BranchType>();
-            _branches = new SortedList<uint, Branch>();
-            _openSockets = new Queue<(uint Address, int Mask)>();
+            _branches = new List<Branch>();
+
+            // _openSockets = new Queue<(uint Address, int Mask)>();
+            _branchesWithOpenSockets = new Queue<Branch>();
+            _growableBranchTypes = new List<BranchType>();
 
             // _branchTypes.Clear();
-            PreprocessBranchType(Definition.RootNode);
+            PreprocessBranchType(_definition.RootNode);
 
             Variant = Random.Range(0, 17);
 
@@ -121,8 +126,9 @@ namespace games.noio.planter
                 DestroyImmediate(child.gameObject);
             }
 
-            AddBranch(RootAddress, new Branch
+            AddBranch(new Branch
             {
+                Depth = 0,
                 GameObject = null,
                 BranchType = _branchTypes[0], // root branch type is always first
                 RelRotation = Quaternion.identity
@@ -131,7 +137,7 @@ namespace games.noio.planter
             /*
              * Need to completely rebuild the OpenSockets Queue.
              */
-            RecalculateOpenSockets();
+            _branchesWithOpenSockets.Enqueue(_branches[0]);
             SetGrowableBranchTypes();
 
             // SetBranches(new Dictionary<uint, Branch>
@@ -193,7 +199,7 @@ namespace games.noio.planter
         {
             var rayOrigin = transform.TransformPoint(new Vector3(0, 2, 0));
             var rayDirection = transform.TransformDirection(Vector3.down);
-            var rootNode = Definition.RootNode;
+            var rootNode = _definition.RootNode;
             var layers = rootNode.Avoids ^ (1 << rootNode.gameObject.layer);
             if (Physics.SphereCast(rayOrigin, rootNode.Capsule.radius, rayDirection, out var hitInfo, 5,
                     layers))
@@ -207,12 +213,6 @@ namespace games.noio.planter
             }
 
             return false;
-        }
-
-        static string BranchName(string baseName, uint address, int variant)
-        {
-            return
-                $"{baseName} D{GetBranchDepth(address)}.S{GetSocketIndex(address)}.A{address.ToString()}.V{variant}";
         }
 
         void PreprocessBranchType(BranchTemplate template)
@@ -271,6 +271,7 @@ namespace games.noio.planter
              */
             public Vector3 RelPosition;
             public Quaternion RelRotation;
+            public int Depth { get; set; }
 
             #endregion
 
@@ -307,6 +308,7 @@ namespace games.noio.planter
             #region PROPERTIES
 
             public int TotalCount { get; set; }
+            public bool Growable { get; set; }
 
             #endregion
         }
@@ -361,7 +363,7 @@ namespace games.noio.planter
                 branch = FindBranchToGrow();
                 if (branch != null)
                 {
-                    Energy -= Definition.EnergyPerBranchInt;
+                    Energy -= _definition.EnergyPerBranchInt;
 
                     /*
                      * When adding a branch, there might
@@ -410,42 +412,72 @@ namespace games.noio.planter
 
         Branch FindBranchToGrow()
         {
-            /*
-             * What does this need to do:
-             *
-             * - Get next open socket from the Queue
-             * - Get random (available!) branch type
-             * - IF FAIL: RE ENQUEUE OPEN SOCKET
-             *
-             */
-            if (_openSockets.Count == 0)
+            if (_branchesWithOpenSockets.Count == 0)
             {
                 FailedGrowAttempts++;
                 return null;
             }
 
-            var attemptGrowAtSocket = _openSockets.Dequeue();
-
-            var growableBranchTypes = attemptGrowAtSocket.Mask & GrowableBranchTypeMask;
+            var parent = _branchesWithOpenSockets.Peek();
+            BranchSocket openSocket = null;
+            while (openSocket == null)
+            {
+                if (_nextSocketIndex < parent.BranchType.Template.Sockets.Count)
+                {
+                    if (parent.Children[_nextSocketIndex] == null)
+                    {
+                        openSocket = parent.BranchType.Template.Sockets[_nextSocketIndex];
+                    }
+                    else
+                    {
+                        _nextSocketIndex++;
+                    }
+                }
+                else
+                {
+                    /*
+                     * We've gone through all sockets on this branch, put it at the
+                     * end of the queue. It could still have open sockets though,
+                     * since it's only removed from the queue once it no longer has open
+                     * sockets (when a branch is grown from the last open socket).
+                     */
+                    _nextSocketIndex = 0;
+                    _branchesWithOpenSockets.Dequeue();
+                    _branchesWithOpenSockets.Enqueue(parent);
+                    parent = _branchesWithOpenSockets.Peek();
+                }
+            }
+            
+            _growableBranchTypes.Clear();
+            foreach (var bt in _branchTypes)
+            {
+                if (bt.Growable && openSocket.BranchOptions.Contains(bt.Template))
+                {
+                    _growableBranchTypes.Add(bt);
+                }
+            }
 
             /*
-             * None of the available branch types fit in this socket.
+             * None of the available branch types fit in this socket,
+             * that can happen depending on the composition of other branches in the plant
+             * (if the selected socket has a "ratio" set)
              * Try again next time.
+             * It's fine if _nextSocketIndex goes out of bounds,
+             * that's what we check for at the beginning of the method
              */
-            if (growableBranchTypes == 0)
+            if (_growableBranchTypes.Count == 0)
             {
-                _openSockets.Enqueue(attemptGrowAtSocket);
+                _nextSocketIndex++;
                 FailedGrowAttempts++;
                 return null;
             }
 
-            var address = attemptGrowAtSocket.Address;
-            var branchType = SelectRandomBranchType(growableBranchTypes);
+            // var address = attemptGrowAtSocket.Address;
+            var branchType = _growableBranchTypes[Random.Range(0, _growableBranchTypes.Count)];
             var template = branchType.Template;
 
-            var parent = _branches[GetParentAddress(address)];
-            var socketIndex = GetSocketIndex(address);
-            GetSocketPositionAndRotation(parent, socketIndex, out var socketPos, out var socketRot);
+            // var parent = _branches[GetParentAddress(address)];
+            GetSocketPositionAndRotation(parent, _nextSocketIndex, out var socketPos, out var socketRot);
 
             // var parent = GetParentAndSocketPosition(address, out var socketRelPos, out var parentRelRot);
 
@@ -479,61 +511,38 @@ namespace games.noio.planter
 
             if (CheckPlacement(globalPos, globalRot, template, false, parent.GameObject))
             {
-//                    var localRot = Quaternion.Inverse(parentRot) * globalRot;
-//                    var schemaNode = new Schema.PlantNode(template._id, localRot.ToSchemaRotation());
-
                 var branch = new Branch
                 {
+                    Depth = parent.Depth + 1,
                     Parent = parent,
                     BranchType = branchType,
                     RelPosition = socketPos,
                     RelRotation = Quaternion.Inverse(RootTransform.rotation) * globalRot
                 };
 
-                AddBranch(address, branch);
-                AddOpenSocketsFor(address, branch);
+                parent.Children[_nextSocketIndex] = branch;
+                if (HasOpenSockets(parent) == false)
+                {
+                    /*
+                     * This parent had all sockets filled, remove from
+                     * 'open sockets' list.
+                     */
+                    _nextSocketIndex = 0;
+                    _branchesWithOpenSockets.Dequeue();
+                }
+                
+                AddBranch(branch);
+                if (HasOpenSockets(branch))
+                {
+                    _branchesWithOpenSockets.Enqueue(branch);
+                }
 
                 FailedGrowAttempts = 0;
                 return branch;
             }
-
-            _openSockets.Enqueue(attemptGrowAtSocket);
+            _nextSocketIndex++;
             FailedGrowAttempts++;
             return null;
-        }
-
-        /// <summary>
-        ///     The passed in mask indicates which branch types should
-        ///     be selected from. E.g.  0b00011010  means that
-        ///     the 2nd, 4th and 5th entries in the _branchTypes list
-        ///     are eligible.
-        /// </summary>
-        /// <param name="combinedMask"></param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        BranchType SelectRandomBranchType(int combinedMask)
-        {
-            /*
-             * We select a random number between 0 and
-             * the number of set bits, then iterate over the branch
-             * types and return the corresponding entry.
-             * It's a bit messed up.
-             */
-            var selectedBranchTypeIndex = Random.Range(0, NumberOfSetBits((uint)combinedMask));
-            foreach (var branchType in _branchTypes)
-            {
-                if ((branchType.BitMask & combinedMask) != 0)
-                {
-                    if (selectedBranchTypeIndex == 0)
-                    {
-                        return branchType;
-                    }
-
-                    selectedBranchTypeIndex--;
-                }
-            }
-
-            throw new Exception("Did not find branch type");
         }
 
         void SetGrowableBranchTypes()
@@ -545,17 +554,15 @@ namespace games.noio.planter
                     branchType.TotalCount < template.MaxCount &&
                     (branchType.TotalCount + 1f) / (BranchCount + 1f) <= template.Quota)
                 {
-                    // Debug.Log($"F{Time.frameCount} CheckGrowable ({branch.Name}): true");
-                    if ((GrowableBranchTypeMask & branchType.BitMask) == 0)
+                    if (branchType.Growable == false)
                     {
+                        branchType.Growable = true;
                         Unblock();
-                        GrowableBranchTypeMask |= branchType.BitMask;
                     }
                 }
                 else
                 {
-                    // Debug.Log($"F{Time.frameCount} CheckGrowable ({branch.Name}): false");
-                    GrowableBranchTypeMask &= ~branchType.BitMask;
+                    branchType.Growable = false;
                 }
             }
         }
@@ -566,35 +573,26 @@ namespace games.noio.planter
             FailedGrowAttempts = 0;
         }
 
-        void AddOpenSocketsFor(uint address, Branch branch, bool checkForExisting = false)
+        bool HasOpenSockets(Branch newBranch)
         {
-            var depthOfChildren = GetBranchDepth(address) + 1;
-            for (var i = 0; i < branch.BranchType.Template.Sockets.Count; i++)
+            var depthOfChildren = newBranch.Depth + 1;
+            for (var i = 0; i < newBranch.BranchType.Template.Sockets.Count; i++)
             {
-                var socket = branch.BranchType.Template.Sockets[i];
-                var childAddress = GetBranchAddress(address, i);
-                if (checkForExisting == false || _branches.ContainsKey(childAddress) == false)
+                if (newBranch.Children[i] == null)
                 {
-                    var mask = 0;
+                    var socket = newBranch.BranchType.Template.Sockets[i];
                     foreach (var childBranchTemplate in socket.BranchOptions)
                     {
-                        // Debug.Log(
-                        // $"F{Time.frameCount} Adding sockets for {branch.Template.name} at {childAddress} ({childBranchTemplate.name})");
-                        if (childBranchTemplate.DepthMin <= depthOfChildren &&
-                            childBranchTemplate.DepthMax >= depthOfChildren)
+                        if (depthOfChildren >= childBranchTemplate.DepthMin &&
+                            depthOfChildren <= childBranchTemplate.DepthMax)
                         {
-                            // TODO: this is inefficient but this code will probably get removed
-                            var branchType = _branchTypes.First(bt => bt.Template == childBranchTemplate);
-                            mask |= branchType.BitMask;
+                            return true;
                         }
-                    }
-
-                    if (mask != 0)
-                    {
-                        _openSockets.Enqueue((childAddress, mask));
                     }
                 }
             }
+
+            return false;
         }
 
         static bool CheckPlacement(
@@ -747,43 +745,6 @@ namespace games.noio.planter
             socketRot = parent.RelRotation * socketTransform.localRotation;
         }
 
-        Branch GetParentAndSocketPosition(uint address, out Vector3 relPos, out Quaternion relRot)
-        {
-            if (address != RootAddress)
-            {
-                var parentAddress = GetParentAddress(address);
-
-                if (_branches.TryGetValue(parentAddress, out var parent) == false)
-                {
-                    Debug.LogError(
-                        $"Tried to find parent for {address} at {parentAddress}, but it does not exist.");
-                    relPos = Vector3.zero;
-                    relRot = Quaternion.identity;
-                    return null;
-                }
-
-                var socketIndex = GetSocketIndex(address);
-                if (socketIndex >= parent.BranchType.Template.Sockets.Count)
-                {
-                    Debug.LogError(
-                        $"Branch for nonexisting socket {socketIndex + 1} on {parent.BranchType.Template.name}");
-                    relPos = Vector3.zero;
-                    relRot = Quaternion.identity;
-                    return parent;
-                }
-
-                var socket = parent.BranchType.Template.Sockets[socketIndex];
-                var socketTransform = socket.transform;
-                relPos = parent.RelPosition + parent.RelRotation * socketTransform.localPosition;
-                relRot = parent.RelRotation * socketTransform.localRotation;
-                return parent;
-            }
-
-            relPos = Vector3.zero;
-            relRot = Quaternion.identity;
-            return null;
-        }
-
         #endregion
 
         #region MODIFICATION
@@ -798,16 +759,15 @@ namespace games.noio.planter
             return a;
         }
 
-        void AddBranch(uint address, Branch branch)
+        void AddBranch(Branch branch)
         {
-            var branchVariant = (int)(FastHash((uint)Variant + address) % 1000);
+            var branchVariant = Variant + _branches.Count;
 
             var go = branch.GameObject;
             if (go == null)
             {
                 go = branch.BranchType.Template.CreateInstance(branchVariant);
                 go.transform.parent = RootTransform;
-                go.name = BranchName(go.name, address, branchVariant);
             }
             else
             {
@@ -819,23 +779,8 @@ namespace games.noio.planter
 
             branch.GameObject = go;
 
-            Assert.IsTrue(address <= MaxAddress,
-                $"Address ({address}) for {go.name} is greater than MAX_ADDRESS: {MaxAddress}");
-
-            _branches.Add(address, branch);
+            _branches.Add(branch);
             branch.BranchType.TotalCount++;
-        }
-
-        /// <summary>
-        ///     Completely rebuild the queue of open sockets from scratch.
-        /// </summary>
-        void RecalculateOpenSockets()
-        {
-            _openSockets.Clear();
-            foreach (var branch in _branches)
-            {
-                AddOpenSocketsFor(branch.Key, branch.Value, true);
-            }
         }
 
         #endregion
@@ -864,13 +809,13 @@ namespace games.noio.planter
             }
         }
 
-        [TitleGroup("Actions")]
-        [HorizontalGroup("Actions/Buttons")]
-        [Button]
+        // [TitleGroup("Actions")]
+        // [HorizontalGroup("Actions/Buttons")]
+        // [Button]
         public void Reset()
         {
 // ReSharper disable once Unity.NoNullPropagation
-            Assert.IsTrue(Definition?.RootNode != null);
+            Assert.IsTrue(_definition?.RootNode != null);
             /*
              * Reset to prefab mode completely
              */
@@ -883,7 +828,7 @@ namespace games.noio.planter
             }
 
 // ReSharper disable once Unity.NoNullPropagation
-            if (Definition?.RootNode != null)
+            if (_definition?.RootNode != null)
             {
                 if (RootTransform == null)
                 {
@@ -898,7 +843,7 @@ namespace games.noio.planter
                     meshFilter = RootTransform.gameObject.AddComponent<MeshFilter>();
                 }
 
-                meshFilter.sharedMesh = Definition.RootNode.GetComponent<MeshFilter>().sharedMesh;
+                meshFilter.sharedMesh = _definition.RootNode.GetComponent<MeshFilter>().sharedMesh;
 
                 if (RootTransform.TryGetComponent(out MeshRenderer meshRenderer) == false)
                 {
@@ -907,7 +852,7 @@ namespace games.noio.planter
 
                 meshRenderer.enabled = true;
                 meshRenderer.sharedMaterials =
-                    Definition.RootNode.GetComponent<MeshRenderer>().sharedMaterials;
+                    _definition.RootNode.GetComponent<MeshRenderer>().sharedMaterials;
             }
 
             /*
@@ -925,11 +870,8 @@ namespace games.noio.planter
             Unblock();
         }
 
-        [TitleGroup("Actions")]
-        [HorizontalGroup("Actions/Buttons")]
-        [Button("Grow")]
-        [EnableIf(nameof(IsInEditMode))]
-        public void ButtonGrow()
+        
+        public void Grow()
         {
             if (Initialized == false)
             {
@@ -948,7 +890,7 @@ namespace games.noio.planter
         /// </summary>
         /// <param name="maxAttempts"></param>
         /// <returns>whether the plant actually grew a node</returns>
-        public bool GrowInEditor(int maxAttempts = 20)
+        bool GrowInEditor(int maxAttempts = 20)
         {
             Assert.IsFalse(Application.isPlaying, "Can't use this button in Play mode");
             Assert.IsTrue(Initialized);
@@ -963,7 +905,7 @@ namespace games.noio.planter
                 /*
                  * Max out energy to keep the plant growin in the editor
                  */
-                Energy = Definition.MaxStoredEnergyInt;
+                Energy = _definition.MaxStoredEnergyInt;
                 return true;
             }
 
@@ -1002,10 +944,10 @@ namespace games.noio.planter
             return true;
         }
 
-        [BoxGroup("Status/Status", false)]
-        [PropertyOrder(0)]
-        [ShowInInspector]
-        [GUIColor(nameof(StatusColor))]
+        // [BoxGroup("Status/Status", false)]
+        // [PropertyOrder(0)]
+        // [ShowInInspector]
+        // [GUIColor(nameof(StatusColor))]
         string Status =>
             Initialized
                 ? AllSocketsFilled ? "Fully Grown" :
@@ -1017,46 +959,46 @@ namespace games.noio.planter
             GrowthBlocked ? new Color(1f, 0.39f, 0.37f) : new Color(0.73f, 1f, 0.74f)
             : new Color(0.55f, 0.66f, 1f);
 
-        [TitleGroup("Status")]
-        [PropertyOrder(3)]
-        [ShowIf(nameof(Initialized))]
-        [OnInspectorGUI]
-        void DrawStatus()
-        {
-            var gray = Color.gray;
-
-            // var green = EditorColors.Green.Hex();
-
-            using (new EditorGUI.DisabledScope(true))
-            {
-                EditorGUILayout.IntField("Total Branches", _branches?.Count ?? 0);
-                EditorGUILayout.IntField("Open Sockets", _openSockets?.Count ?? 0);
-            }
-
-            if (this != null)
-            {
-                foreach (var branchType in _branchTypes ?? Enumerable.Empty<BranchType>())
-                {
-                    GUIHelper.PushColor((branchType.BitMask & GrowableBranchTypeMask) > 0
-                        ? new Color(0.76f, 1f, 0.78f)
-                        : Color.white);
-                    SirenixEditorGUI.BeginBox();
-                    using (new EditorGUILayout.HorizontalScope())
-                    {
-                        var label = branchType.Template.name;
-
-                        GUILayout.Label(label, EditorStyles.miniLabel,
-                            GUILayout.Width(EditorGUIUtility.labelWidth));
-                        GUILayout.Label(
-                            $"{branchType.TotalCount} <color={gray}>/ {branchType.Template.MaxCount}</color>",
-                            RichTextMiniLabelStyle);
-                    }
-
-                    SirenixEditorGUI.EndBox();
-                    GUIHelper.PopColor();
-                }
-            }
-        }
+        // [TitleGroup("Status")]
+        // [PropertyOrder(3)]
+        // [ShowIf(nameof(Initialized))]
+        // [OnInspectorGUI]
+        // void DrawStatus()
+        // {
+        //     var gray = Color.gray;
+        //
+        //     // var green = EditorColors.Green.Hex();
+        //
+        //     using (new EditorGUI.DisabledScope(true))
+        //     {
+        //         EditorGUILayout.IntField("Total Branches", _branches?.Count ?? 0);
+        //         EditorGUILayout.IntField("Open Sockets", _branchesWithOpenSockets?.Count ?? 0);
+        //     }
+        //
+        //     if (this != null)
+        //     {
+        //         foreach (var branchType in _branchTypes ?? Enumerable.Empty<BranchType>())
+        //         {
+        //             GUIHelper.PushColor(branchType.Growable
+        //                 ? new Color(0.76f, 1f, 0.78f)
+        //                 : Color.white);
+        //             SirenixEditorGUI.BeginBox();
+        //             using (new EditorGUILayout.HorizontalScope())
+        //             {
+        //                 var label = branchType.Template.name;
+        //
+        //                 GUILayout.Label(label, EditorStyles.miniLabel,
+        //                     GUILayout.Width(EditorGUIUtility.labelWidth));
+        //                 GUILayout.Label(
+        //                     $"{branchType.TotalCount} <color={gray}>/ {branchType.Template.MaxCount}</color>",
+        //                     RichTextMiniLabelStyle);
+        //             }
+        //
+        //             SirenixEditorGUI.EndBox();
+        //             GUIHelper.PopColor();
+        //         }
+        //     }
+        // }
 #endif
 
         #endregion // EDITOR
