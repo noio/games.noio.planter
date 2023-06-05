@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <uie:PropertyField binding-path="_branchOptions" />
+    <ui:ListView name="branch-list" binding-path="_branchOptions2" reorderable="false" show-bound-collection-size="false" />
+    <ui:Button text="Add" display-tooltip-when-elided="true" name="add-button" />
+</ui:UXML>

@@ -43,7 +43,7 @@ namespace games.noio.planter.Editor
             resetButton.clicked += () => plant.Reset();
 
             var growButton = tree.Q<Button>("grow-button");
-            growButton.clicked += () => plant.Grow();
+            growButton.clicked += () => plant.ForceStartGrow();
 
             var speciesInspector = tree.Q<VisualElement>("species-inspector");
             var speciesProp = serializedObject.FindProperty("_species");

@@ -1,1 +1,3 @@
-- [ ] get rid of branch uint ids
+- [x] get rid of branch uint ids
+- [ ] BranchTemplate UI (add Branch button, set options per branch, etc)
+- [ ] Remove custom layer dependency, make sure that plants don't use self as surface by default

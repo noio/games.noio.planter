@@ -1,0 +1,33 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/BranchSocketOption.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchSocketOption" />
+    <ui:VisualElement name="constraints" class="section-box">
+        <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-self: stretch; justify-content: space-between; margin-left: 2px; margin-right: 0; margin-top: 4px; margin-bottom: 4px;">
+            <ui:Label tabindex="-1" text="Constraints" display-tooltip-when-elided="true" class="header" />
+            <ui:Label tabindex="-1" text="Can this branch grow?" display-tooltip-when-elided="true" class="description" />
+        </ui:VisualElement>
+        <ui:VisualElement style="flex-direction: row;">
+            <ui:FloatField label="Depth" value="42.2" name="depth-min" binding-path="_depthMin" class="unity-base-field__aligned" style="flex-grow: 1;" />
+            <ui:Label tabindex="-1" text="—" display-tooltip-when-elided="true" style="-unity-text-align: middle-left; padding-left: 8px;" />
+            <ui:FloatField value="42.2" name="depth-max" binding-path="_depthMax" style="flex-grow: 1;" />
+        </ui:VisualElement>
+        <ui:IntegerField label="Max Count" value="42" name="max-count" binding-path="_maxCount" class="unity-base-field__aligned" />
+        <ui:Slider picking-mode="Ignore" label="Quota (%)" value="100" high-value="100" name="quota-slider" binding-path="_quotaPercent" show-input-field="true" class="unity-base-field__aligned" style="flex-grow: 1;" />
+        <ui:IntegerField label="Min Other Branches" value="0" binding-path="_minTotalOtherBranches" name="min-other-branches" class="unity-base-field__aligned" />
+    </ui:VisualElement>
+    <ui:VisualElement name="shape" class="section-box">
+        <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-self: stretch; justify-content: space-between; margin-left: 2px; margin-right: 0; margin-top: 4px; margin-bottom: 4px;">
+            <ui:Label tabindex="-1" text="Shape" display-tooltip-when-elided="true" class="header" />
+            <ui:Label tabindex="-1" text="Where does this branch grow?" display-tooltip-when-elided="true" class="description" />
+        </ui:VisualElement>
+        <uie:LayerMaskField label="Obstacle Layers" binding-path="_obstacleLayers" name="obstacle-layers" class="unity-base-field__aligned" />
+        <uie:LayerMaskField label="Surface Layers" binding-path="_surfaceLayers" name="surface-layers" focusable="true" class="unity-base-field__aligned" />
+        <ui:Slider picking-mode="Ignore" label="Surface Distance" value="1" high-value="2" name="surface-distance" low-value="0.2" binding-path="_surfaceDistance" show-input-field="true" class="unity-base-field__aligned" />
+        <ui:Slider picking-mode="Ignore" label="Max Pivot Angle" value="42" high-value="180" show-input-field="true" name="max-pivot-angle" binding-path="_maxPivotAngle" class="unity-base-field__aligned" style="justify-content: flex-start; align-items: flex-start; margin-top: 12px;" />
+        <ui:Slider picking-mode="Ignore" label="Max Roll Angle" value="42" high-value="180" show-input-field="true" name="max-roll-angle" binding-path="_maxRollAngle" class="unity-base-field__aligned" style="justify-content: flex-start; align-items: flex-start;" />
+        <ui:Slider picking-mode="Ignore" label="Grow Upwards" value="0" high-value="1" show-input-field="true" name="grow-upwards" binding-path="_growUpwards" low-value="-1" class="unity-base-field__aligned" style="justify-content: flex-start; align-items: flex-start;" />
+        <ui:Toggle label="Face Upwards" name="face-upwards" binding-path="_faceUpwards" class="unity-base-field__aligned" />
+        <ui:Label tabindex="-1" text="Mesh Variants" display-tooltip-when-elided="true" style="margin-left: 3px; margin-top: 12px; margin-bottom: 2px;" />
+        <ui:ListView focusable="true" binding-path="_meshVariants" show-bound-collection-size="false" show-add-remove-footer="true" reorderable="true" show-border="true" show-foldout-header="false" style="margin-left: 2px;" />
+    </ui:VisualElement>
+    <ui:Foldout text="Default Inspector" name="default-inspector" />
+</ui:UXML>

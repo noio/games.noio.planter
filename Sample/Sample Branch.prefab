@@ -35,7 +35,7 @@ Transform:
   - {fileID: 8987653134357549871}
   - {fileID: 1804859244625026023}
   m_Father: {fileID: 0}
-  m_RootOrder: -1
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &6838132298060743433
 MonoBehaviour:
@@ -49,27 +49,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 54e90914baa36473d8bb610292069d20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DepthMin: 0
-  DepthMax: 12
-  MaxCount: 100
-  Quota: 1
-  MinTotalOtherBranches: 0
-  Avoids:
+  _depthMin: 0
+  _depthMax: 12
+  _maxCount: 500
+  _quotaPercent: 100
+  _minTotalOtherBranches: 0
+  _obstacleLayers:
     serializedVersion: 2
     m_Bits: 1073741825
-  RemoveIfOverlaps: 1
-  NeedsSurface: 1
-  Surface:
+  _surfaceLayers:
     serializedVersion: 2
     m_Bits: 1
-  SurfaceDistance: 1
-  MakeHorizontal: 0
-  MaxPivotAngle: 45
-  MaxRollAngle: 45
-  VerticalBias: 0
-  GrowTime: 0.75
-  MeshVariants: []
-  _databaseId: 0
+  _surfaceDistance: 1
+  _maxPivotAngle: 53
+  _maxRollAngle: 30
+  _growUpwards: 0.14
+  _faceUpwards: 0
+  _meshVariants: []
 --- !u!33 &4802260665251460202
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -189,8 +185,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a31482d84b8c34bf2905085b7d58948a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BranchOptions:
+  _branchOptions:
   - {fileID: 6838132298060743433}
+  _branchOptions2:
+  - _template: {fileID: 0}
+    _probability: 10
+  - _template: {fileID: 0}
+    _probability: 0
 --- !u!33 &9065118753797781063
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -287,8 +288,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a31482d84b8c34bf2905085b7d58948a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  BranchOptions:
+  _branchOptions:
   - {fileID: 6838132298060743433}
+  _branchOptions2: []
 --- !u!33 &2544994730202722263
 MeshFilter:
   m_ObjectHideFlags: 0

@@ -1,22 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.Assertions;
-using UnityEngine.Serialization;
 using Random = UnityEngine.Random;
 
 namespace games.noio.planter
 {
-    [ExecuteInEditMode]
+    [ExecuteAlways]
     public class Plant : MonoBehaviour
     {
+        
+        const int MaxFailedGrowAttempts = 5000;
+        const int GrowAttemptsPerFrame = 200;
+        const int BranchesPerFrame = 10;
         static readonly Collider[] ColliderCache = new Collider[2];
 
         #region PUBLIC AND SERIALIZED FIELDS
 
+        [Tooltip("Restart simulation when the GameObject is moved")]
+        [SerializeField] bool _resetWhenMoved;
         [SerializeField] Transform _rootTransform;
         [SerializeField] PlantSpecies _species;
+        [SerializeField] PlantState _state;
+        [SerializeField] Vector3 _grownAtLocation;
+        [SerializeField] Quaternion _grownAtRotation;
 
         #endregion
 
@@ -25,31 +33,68 @@ namespace games.noio.planter
         List<BranchType> _branchTypes;
         List<BranchType> _growableBranchTypes;
         int _nextSocketIndex;
-        Vector3 _settledPosition;
 
         #region PROPERTIES
 
-        public bool AllSocketsFilled => ((_branchTypes?.Any(bt => bt.Growable) ?? false) &&
-                                         _branchesWithOpenSockets?.Count > 0) == false;
-        public bool GrowthBlocked { get; private set; }
-        public int BranchCount => _branches.Count;
-
-        /// <summary>
-        ///     Is this plant considered to be "Fully Grown".
-        /// </summary>
-        public bool FullyGrown => AllSocketsFilled || GrowthBlocked;
-
         public int FailedGrowAttempts { get; private set; }
 
-        bool AnyOpenSocketsLeft => (_branchTypes?.Any(bt => bt.Growable) ?? false) &&
-                                   _branchesWithOpenSockets?.Count > 0;
+        #endregion
+
+        #region MONOBEHAVIOUR METHODS
+
+        void Update()
+        {
+            if (_resetWhenMoved &&
+                (Vector3.Distance(transform.position, _grownAtLocation) > .01f ||
+                 Quaternion.Angle(transform.rotation, _grownAtRotation) > 1))
+            {
+                Reset();
+                _state = PlantState.Growing;
+            }
+            
+            switch (_state)
+            {
+                case PlantState.Growing:
+                {
+                    _grownAtLocation = transform.position;
+                    _grownAtRotation = transform.rotation;
+
+                    PrepareForGrowing();
+
+                    for (int i = 0; i < BranchesPerFrame; i++)
+                    {
+                        Grow();
+                    }
+
+                    if (_state == PlantState.Growing)
+                    {
+                        EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
+                    }
+
+                    break;
+                }
+                case PlantState.Blocked:
+                    break;
+                case PlantState.FullyGrown:
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
 
         #endregion
+
+        public void ForceStartGrow()
+        {
+            EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
+            _state = PlantState.Growing;
+            FailedGrowAttempts = 0;
+        }
 
         public void PrepareForGrowing()
         {
             CheckSetup();
-            
+
             if (IsCacheValid() == false)
             {
                 /*
@@ -66,14 +111,72 @@ namespace games.noio.planter
             {
                 Reset(); // also clears cache
             }
-            
-            Unblock();
+
+            _state = PlantState.Growing;
+        }
+
+        static Quaternion RotateAroundZ(float zRad)
+        {
+            // float rollOver2 = 0;
+            var halfAngle = zRad * 0.5f;
+            var sinAngle = Mathf.Sin(halfAngle);
+            var cosAngle = Mathf.Cos(halfAngle);
+
+            // float yawOver2 = 0;
+
+            return new Quaternion(
+                0,
+                0,
+                sinAngle,
+                cosAngle
+            );
+        }
+
+        public void Reset()
+        {
+            CheckSetup();
+
+            if (_rootTransform != null)
+            {
+                /*
+                 * Clear out the nodes
+                 */
+                for (var i = _rootTransform.childCount - 1; i >= 0; i--)
+                {
+                    var child = _rootTransform.GetChild(i);
+                    DestroyImmediate(child.gameObject);
+                }
+            }
+            else
+            {
+                /*
+                 * If the RootTransform is not set, actually clear out ALL
+                 * children of this GameObject
+                 */
+                for (var i = transform.childCount - 1; i >= 0; i--)
+                {
+                    var child = transform.GetChild(i);
+                    DestroyImmediate(child.gameObject);
+                }
+            }
+
+            ClearCache();
+            CreateRootTransform();
+            PreprocessBranchType(_species.RootBranch);
+            AddBranch(null, 0, _branchTypes[0], Vector3.zero, Quaternion.identity);
+            _branchesWithOpenSockets.Enqueue(_branches[0]);
+            UpdateGrowableBranchTypes();
+
+            /*
+             * Block to prevent plant from growing immediately
+             */
+            _state = PlantState.Blocked;
         }
 
         bool TryReconstructCacheFromHierarchy()
         {
             ClearCache();
-                          
+
             PreprocessBranchType(_species.RootBranch);
 
             foreach (var branch in GetComponentsInChildren<Branch>())
@@ -90,14 +193,14 @@ namespace games.noio.planter
                 }
 
                 branchType.TotalCount++;
-                
+
                 _branches.Add(branch);
-                if (HasOpenSockets(branch))
+                if (branch.HasOpenSockets())
                 {
                     _branchesWithOpenSockets.Enqueue(branch);
                 }
             }
-            
+
             UpdateGrowableBranchTypes();
             return true;
         }
@@ -106,13 +209,13 @@ namespace games.noio.planter
         {
             _branchTypes?.Clear();
             _branchTypes ??= new List<BranchType>();
-            
+
             _branches?.Clear();
             _branches ??= new List<Branch>();
-            
+
             _branchesWithOpenSockets?.Clear();
             _branchesWithOpenSockets ??= new Queue<Branch>();
-            
+
             _growableBranchTypes?.Clear();
             _growableBranchTypes ??= new List<BranchType>();
         }
@@ -123,39 +226,46 @@ namespace games.noio.planter
         }
 
         /// <summary>
-        ///     Perform a number of settling steps
-        ///     Settling is most essential on meshColliders, where the collision
-        ///     with the seed tends to be way off.
-        /// </summary>
-        /// <param name="steps"></param>
-        /// <param name="lerpAmount"></param>
-        public void Settle(int steps, float lerpAmount)
-        {
-            while (steps-- > 0)
-            {
-                SettleStep(lerpAmount);
-            }
-        }
-
-        /// <summary>
         ///     Perform one pass of 'settling' the plant on underlying objects (Moving it closer)
         /// </summary>
-        /// <returns></returns>
-        bool SettleStep(float lerpAmount = .2f)
+        /// <returns>Whether the plant is settled</returns>
+        bool SnapToGround(int steps = 10, float lerpAmount = .2f)
         {
-            var rayOrigin = transform.TransformPoint(new Vector3(0, 2, 0));
-            var rayDirection = transform.TransformDirection(Vector3.down);
-            var rootNode = _species.RootBranch;
-            var layers = rootNode.Avoids ^ (1 << rootNode.gameObject.layer);
-            if (Physics.SphereCast(rayOrigin, rootNode.Capsule.radius, rayDirection, out var hitInfo, 5,
-                    layers))
+            for (int i = 0; i < steps; i++)
             {
-                transform.position = Vector3.Lerp(transform.position, hitInfo.point, lerpAmount);
-                transform.rotation = Quaternion.Lerp(transform.rotation,
-                    Quaternion.LookRotation(hitInfo.normal, -transform.forward) * Quaternion.Euler(90, 0, 0),
-                    lerpAmount);
-
-                return true;
+                var rayOrigin = transform.TransformPoint(new Vector3(0, 2, 0));
+                var dir = new Vector3(Random.Range(-.5f, .5f), -1, Random.Range(-.5f, .5f));
+                var rayDirection = transform.TransformDirection(dir);
+                Debug.DrawRay(rayOrigin, rayDirection, Color.magenta, 10);
+                var rootNode = _species.RootBranch;
+                var layers = rootNode.ObstacleLayers ^ (1 << rootNode.gameObject.layer);
+                if (Physics.SphereCast(rayOrigin, 2, rayDirection, out var hitInfo, 5,
+                        layers))
+                {
+                    Debug.DrawLine(hitInfo.point, hitInfo.point + Vector3.right, Color.cyan, 20);
+                    if (Vector3.Distance(transform.position, hitInfo.point) > .03f)
+                    {
+                        transform.position = Vector3.Lerp(transform.position, hitInfo.point, lerpAmount);
+                        transform.rotation = Quaternion.Lerp(transform.rotation,
+                            Quaternion.LookRotation(hitInfo.normal, -transform.forward) *
+                            Quaternion.Euler(90, 0, 0),
+                            lerpAmount);
+                    }
+                    else
+                    {
+                        /*
+                         * Plant was close to ray hit
+                         */
+                        return true;
+                    }
+                }
+                else
+                {
+                    /*
+                     * Ray didn't hit anything, we're floating so don't settle
+                     */
+                    return true;
+                }
             }
 
             return false;
@@ -196,27 +306,6 @@ namespace games.noio.planter
             }
         }
 
-        class BranchType
-        {
-            #region PUBLIC AND SERIALIZED FIELDS
-
-            public readonly BranchTemplate Template;
-
-            #endregion
-
-            public BranchType(BranchTemplate template)
-            {
-                Template = template;
-            }
-
-            #region PROPERTIES
-
-            public int TotalCount { get; set; }
-            public bool Growable { get; set; }
-
-            #endregion
-        }
-
         /// <summary>
         ///     Returns the distance along the axis of the capsule towards the
         ///     centers of the 'start' and 'end' as used by Physics.CheckCapsule
@@ -239,56 +328,32 @@ namespace games.noio.planter
         /// <param name="branch"></param>
         /// <returns></returns>
         /// <exception cref="Exception"></exception>
-        bool Grow(int attempts, out Branch branch)
+        bool Grow()
         {
+            var attempts = GrowAttemptsPerFrame;
             while (attempts-- > 0)
             {
-                branch = FindBranchToGrow();
+                var branch = FindBranchToGrow();
                 if (branch != null)
                 {
-                    /*
-                     * When adding a branch, there might
-                     * now be other branches that are growable
-                     */
-                    UpdateGrowableBranchTypes();
-
                     return true;
                 }
             }
 
-            if (FailedGrowAttempts > MaxGrowAttempts)
+            if (FailedGrowAttempts > MaxFailedGrowAttempts)
             {
-                GrowthBlocked = true;
+                _state = PlantState.Blocked;
             }
 
-            branch = null;
             return false;
-        }
-
-        const int MaxGrowAttempts = 5000;
-
-        public static Quaternion RotateAroundZ(float zRad)
-        {
-            // float rollOver2 = 0;
-            var halfAngle = zRad * 0.5f;
-            var sinAngle = Mathf.Sin(halfAngle);
-            var cosAngle = Mathf.Cos(halfAngle);
-
-            // float yawOver2 = 0;
-
-            return new Quaternion(
-                0,
-                0,
-                sinAngle,
-                cosAngle
-            );
         }
 
         Branch FindBranchToGrow()
         {
             if (_branchesWithOpenSockets.Count == 0)
             {
-                FailedGrowAttempts++;
+                Debug.Log("No open sockets. Plant is done");
+                _state = PlantState.FullyGrown;
                 return null;
             }
 
@@ -373,18 +438,18 @@ namespace games.noio.planter
             var globalRot = parent.transform.rotation * socketLocalRot * pivot;
             var globalPos = parent.transform.TransformPoint(socketLocalPos);
 
-            if (template.VerticalBias < 0)
+            if (template.GrowUpwards < 0)
             {
                 var down = Quaternion.LookRotation(Vector3.down, globalRot * Vector3.forward);
-                globalRot = Quaternion.SlerpUnclamped(globalRot, down, -template.VerticalBias);
+                globalRot = Quaternion.SlerpUnclamped(globalRot, down, -template.GrowUpwards);
             }
-            else if (template.VerticalBias > 0)
+            else if (template.GrowUpwards > 0)
             {
                 var up = Quaternion.LookRotation(Vector3.up, globalRot * Vector3.back);
-                globalRot = Quaternion.SlerpUnclamped(globalRot, up, template.VerticalBias);
+                globalRot = Quaternion.SlerpUnclamped(globalRot, up, template.GrowUpwards);
             }
 
-            if (template.MakeHorizontal)
+            if (template.FaceUpwards)
             {
                 globalRot = Quaternion.LookRotation(globalRot * Vector3.forward, Vector3.up);
             }
@@ -397,12 +462,12 @@ namespace games.noio.planter
                 var branch = AddBranch(parent, _nextSocketIndex, branchType,
                     socketLocalPos, Quaternion.Inverse(parent.transform.rotation) * globalRot);
 
-                if (HasOpenSockets(branch))
+                if (branch.HasOpenSockets())
                 {
                     _branchesWithOpenSockets.Enqueue(branch);
                 }
 
-                if (HasOpenSockets(parent) == false)
+                if (parent.HasOpenSockets() == false)
                 {
                     /*
                      * This parent had all sockets filled, remove from
@@ -411,6 +476,8 @@ namespace games.noio.planter
                     _nextSocketIndex = 0;
                     _branchesWithOpenSockets.Dequeue();
                 }
+
+                UpdateGrowableBranchTypes();
 
                 FailedGrowAttempts = 0;
                 return branch;
@@ -423,52 +490,28 @@ namespace games.noio.planter
 
         void UpdateGrowableBranchTypes()
         {
+            var anyGrowable = false;
             foreach (var branchType in _branchTypes)
             {
                 var template = branchType.Template;
-                if (BranchCount >= template.MinTotalOtherBranches &&
+                if (_branches.Count >= template.MinTotalOtherBranches &&
                     branchType.TotalCount < template.MaxCount &&
-                    (branchType.TotalCount + 1f) / (BranchCount + 1f) <= template.Quota)
+                    (branchType.TotalCount + 1f) / (_branches.Count + 1f) <= template.QuotaPercent / 100f)
                 {
-                    if (branchType.Growable == false)
-                    {
-                        branchType.Growable = true;
-                        Unblock();
-                    }
+                    anyGrowable = true;
+                    branchType.Growable = true;
                 }
                 else
                 {
                     branchType.Growable = false;
                 }
             }
-        }
 
-        void Unblock()
-        {
-            GrowthBlocked = false;
-            FailedGrowAttempts = 0;
-        }
-
-        bool HasOpenSockets(Branch newBranch)
-        {
-            var depthOfChildren = newBranch.Depth + 1;
-            for (var i = 0; i < newBranch.Template.Sockets.Count; i++)
+            if (anyGrowable == false)
             {
-                if (newBranch.Children[i] == null)
-                {
-                    var socket = newBranch.Template.Sockets[i];
-                    foreach (var childBranchTemplate in socket.BranchOptions)
-                    {
-                        if (depthOfChildren >= childBranchTemplate.DepthMin &&
-                            depthOfChildren <= childBranchTemplate.DepthMax)
-                        {
-                            return true;
-                        }
-                    }
-                }
+                Debug.Log("No branch types available. Plant is done");
+                _state = PlantState.FullyGrown;
             }
-
-            return false;
         }
 
         static bool CheckPlacement(
@@ -500,7 +543,7 @@ namespace games.noio.planter
             var start = globalPos + dir * startDist;
             var end = globalPos + dir * endDist;
 
-            var occupied = template.Avoids;
+            var occupied = template.ObstacleLayers;
 
             if (ignoredParent == null)
             {
@@ -542,7 +585,7 @@ namespace games.noio.planter
 
             radius *= template.SurfaceDistance;
 
-            var count = Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.Surface);
+            var count = Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.SurfaceLayers);
 
             return count > 0 ? ColliderCache[0] : null;
         }
@@ -568,16 +611,35 @@ namespace games.noio.planter
             socketLocalRot = socketTransform.localRotation;
         }
 
-        #region MODIFICATION
-
-        public static uint FastHash(uint a)
+        /// <summary>
+        ///     Checks if a Species is set, and if a RootNode is
+        ///     created & set. Will create a rootnode if none is set.
+        /// </summary>
+        void CheckSetup()
         {
-            a = a ^ 61 ^ (a >> 16);
-            a = a + (a << 3);
-            a = a ^ (a >> 4);
-            a = a * 0x27d4eb2d;
-            a = a ^ (a >> 15);
-            return a;
+            if (_species == null)
+            {
+                throw new Exception($"Create and set a {nameof(PlantSpecies)} on Plant \"{name}\"");
+            }
+
+            if (_species.RootBranch == null)
+            {
+                throw new Exception(
+                    $"Create and set a RootNode ({nameof(BranchTemplate)}) on Species \"{_species}\"");
+            }
+        }
+
+        void CreateRootTransform()
+        {
+            if (_species?.RootBranch != null)
+            {
+                if (_rootTransform == null)
+                {
+                    _rootTransform = new GameObject("Root Transform").transform;
+                    _rootTransform.SetParent(transform, false);
+                    _rootTransform.rotation = Quaternion.Euler(-90, 0, 0);
+                }
+            }
         }
 
         Branch AddBranch(
@@ -611,133 +673,32 @@ namespace games.noio.planter
             return branch;
         }
 
-        #endregion
-
-        /// <summary>
-        /// Checks if a Species is set, and if a RootNode is
-        /// created & set. Will create a rootnode if none is set.
-        /// </summary>
-        void CheckSetup()
+        class BranchType
         {
-            if (_species == null)
+            #region PUBLIC AND SERIALIZED FIELDS
+
+            public readonly BranchTemplate Template;
+
+            #endregion
+
+            public BranchType(BranchTemplate template)
             {
-                throw new Exception($"Create and set a {nameof(PlantSpecies)} on Plant \"{name}\"");
+                Template = template;
             }
 
-            if (_species.RootBranch == null)
-            {
-                throw new Exception(
-                    $"Create and set a RootNode ({nameof(BranchTemplate)}) on Species \"{_species}\"");
-            }
-        }
+            #region PROPERTIES
 
-        public void Reset()
-        {
-            CheckSetup();
+            public int TotalCount { get; set; }
+            public bool Growable { get; set; }
 
-            if (_rootTransform != null)
-            {
-                /*
-                 * Clear out the nodes
-                 */
-                for (var i = _rootTransform.childCount - 1; i >= 0; i--)
-                {
-                    var child = _rootTransform.GetChild(i);
-                    DestroyImmediate(child.gameObject);
-                }
-            }
-            else
-            {
-                /*
-                 * If the RootTransform is not set, actually clear out ALL
-                 * children of this GameObject
-                 */
-                for (int i = transform.childCount - 1; i >= 0; i--)
-                {
-                    var child = transform.GetChild(i);
-                    DestroyImmediate(child.gameObject);
-                }
-            }
-
-            ClearCache();
-            CreateRootTransform();
-            PreprocessBranchType(_species.RootBranch);
-            AddBranch(null, 0, _branchTypes[0], Vector3.zero, Quaternion.identity);
-            _branchesWithOpenSockets.Enqueue(_branches[0]);
-            UpdateGrowableBranchTypes();
-
-            Unblock();
-        }
-
-
-        void CreateRootTransform()
-        {
-            if (_species?.RootBranch != null)
-            {
-                if (_rootTransform == null)
-                {
-                    _rootTransform = new GameObject("Root Transform").transform;
-                    _rootTransform.SetParent(transform, false);
-                    _rootTransform.rotation = Quaternion.Euler(-90, 0, 0);
-                }
-            }
-        }
-
-        public void Grow()
-        {
-            PrepareForGrowing();
-
-            for (int i = 0; i < 10; i++)
-            {
-                GrowInEditor(200);
-            }
-        }
-
-        /// <summary>
-        ///     Grow a plant inside the editor
-        /// </summary>
-        /// <param name="maxAttempts"></param>
-        /// <returns>whether the plant actually grew a node</returns>
-        bool GrowInEditor(int maxAttempts = 20)
-        {
-            Assert.IsFalse(Application.isPlaying, "Can't use this button in Play mode");
-
-            if (GrowthBlocked)
-            {
-                return false;
-            }
-
-            return Grow(maxAttempts, out _);
-        }
-
-        public bool CheckIfSettled()
-        {
-            /*
-             * This is only to be used in the editor.
-             */
-            Assert.IsFalse(Application.isPlaying);
-            var pos = transform.position;
-
-            if ((pos - _settledPosition).sqrMagnitude > 0.0001f)
-            {
-                /*
-                 * Set the Settled Position regardless of whether
-                 * the plant moves in this call. That means if it doesn't
-                 * move, the next call to CheckIfSettled will return True;
-                 */
-                _settledPosition = pos;
-                /*
-                 * If the plant was moved, reset all grown nodes.
-                 */
-                if (SettleStep())
-                {
-                    PrepareForGrowing();
-                }
-
-                return false;
-            }
-
-            return true;
+            #endregion
         }
     }
+}
+
+internal enum PlantState
+{
+    Blocked,
+    Growing,
+    FullyGrown
 }

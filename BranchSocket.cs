@@ -1,21 +1,20 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
-// using Sirenix.OdinInspector;
 using UnityEditor;
 using UnityEngine;
+
+// using Sirenix.OdinInspector;
 
 // ReSharper disable Unity.NoNullPropagation
 namespace games.noio.planter
 {
     public class BranchSocket : MonoBehaviour
     {
-        #region PUBLIC FIELDS
+        #region PUBLIC AND SERIALIZED FIELDS
 
-#if UNITY_EDITOR
-        // [OnValueChanged(nameof(OnBranchOptionsChanged))]
-        // [ListDrawerSettings(CustomAddFunction = nameof(AddBranchOption), Expanded = true)]
-#endif
-        public List<BranchTemplate> BranchOptions;
+        [SerializeField] List<BranchTemplate> _branchOptions;
+        [SerializeField] List<SocketOption> _branchOptions2;
 
         #endregion
 
@@ -23,9 +22,20 @@ namespace games.noio.planter
 
         #region PROPERTIES
 
-        BranchTemplate ParentTemplate => _parentTemplate ? _parentTemplate : _parentTemplate = GetComponentInParent<BranchTemplate>();
+        BranchTemplate ParentTemplate => _parentTemplate
+            ? _parentTemplate
+            : _parentTemplate = GetComponentInParent<BranchTemplate>();
+
+        public IReadOnlyList<BranchTemplate> BranchOptions => _branchOptions;
 
         #endregion
+
+        [Serializable]
+        class SocketOption
+        {
+            [SerializeField] BranchTemplate _template;
+            [SerializeField] float _probability;
+        }
 
 #if UNITY_EDITOR
 
@@ -52,7 +62,7 @@ namespace games.noio.planter
                 }
 
                 var firstOption = BranchOptions[0];
-    
+
                 meshFilter.sharedMesh = firstOption.GetMeshVariant(0);
                 meshRenderer.sharedMaterials = firstOption.GetComponent<MeshRenderer>().sharedMaterials;
             }
@@ -65,13 +75,12 @@ namespace games.noio.planter
             var allBranches = AssetDatabase.FindAssets("t:GameObject")
                                            .Select(AssetDatabase.GUIDToAssetPath)
                                            .Select(AssetDatabase.LoadAssetAtPath<BranchTemplate>)
-                                           .Where(bt=>bt != null)
+                                           .Where(bt => bt != null)
                                            .ToList();
             var branchesOfSamePlant = allBranches
                                       .Where(d => d.name.StartsWith(namePrefix))
                                       .Where(d => BranchOptions.Contains(d) == false)
                                       .ToList();
-
 
             var menu = new GenericMenu();
             foreach (var branch in branchesOfSamePlant)
@@ -79,17 +88,16 @@ namespace games.noio.planter
                 menu.AddItem(new GUIContent(branch.name), false, () =>
                 {
                     Undo.RecordObject(this, "Add Branch Option");
-                    BranchOptions.Insert(0, branch);
+                    _branchOptions.Insert(0, branch);
                 });
             }
-
 
             foreach (var branch in allBranches)
             {
                 menu.AddItem(new GUIContent("Other/" + branch.name), false, () =>
                 {
                     Undo.RecordObject(this, "Add Branch Option");
-                    BranchOptions.Insert(0, branch);
+                    _branchOptions.Insert(0, branch);
                 });
             }
 

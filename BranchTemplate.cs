@@ -1,85 +1,59 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
-
-// using Sirenix.OdinInspector;
-// using Sirenix.Utilities.Editor;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Serialization;
+
+// using Sirenix.OdinInspector;
+// using Sirenix.Utilities.Editor;
 
 namespace games.noio.planter
 {
     [ExecuteAlways]
     public class BranchTemplate : MonoBehaviour
     {
-        #region PUBLIC FIELDS
+        #region PUBLIC AND SERIALIZED FIELDS
 
-        [FormerlySerializedAs("NodeDepth")]
+        [Tooltip("Where in the plant is this branch allowed to occur?")]
+        [SerializeField]
+        int _depthMin;
 
-        // [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
-        public int DepthMin;
+        [Tooltip("Where in the plant is this branch allowed to occur?")]
+        [SerializeField]
+        int _depthMax = 12;
 
-        // [TitleGroup("Shape")]
-        public int DepthMax = 12;
+        [SerializeField] int _maxCount = 500;
 
-        // [TitleGroup("Shape")]
-        public int MaxCount = 100;
-
-// #if UNITY_EDITOR
-        // [CustomValueDrawer(nameof(MaxQuotaPercentage))]
-// #endif
-        // [TitleGroup("Shape")]
         [Tooltip("How much of the plant can be made up of this type of branch")]
-        public float Quota = 1;
+        [SerializeField]
+        [Range(0,100)]
+        float _quotaPercent = 100;
 
-        // [TitleGroup("Shape")]
-        [Tooltip("How many ohter branches (of any type) should the plant have, before" +
+        [Tooltip("How many other branches (of any type) should the plant have, before " +
                  "this type of branch can grow")]
-        public int MinTotalOtherBranches;
+        [SerializeField]
+        int _minTotalOtherBranches;
 
-        // [TitleGroup("Shape")]
-        // [TitleGroup("Shape")]
-        // [HorizontalGroup("Shape/Avoid")]
-        [Tooltip("The plant will not grow through colliders on these layers")]
-        public LayerMask Avoids = 1;
+        [Tooltip("This branch will not grow through colliders on these layers")]
+        [SerializeField]
+        LayerMask _obstacleLayers = 1;
 
-        // [TitleGroup("Shape")]
-        // [HorizontalGroup("Shape/Avoid", Width = 50)]
-        // [ToggleLeft]
-        [Tooltip("Remove branches if they overlap objects on the avoided layers")]
-        public bool RemoveIfOverlaps = true;
-
-        // [TitleGroup("Shape")]
-        public bool NeedsSurface;
-
-        // [TitleGroup("Shape")]
-        // [EnableIf(nameof(NeedsSurface))]
-        public LayerMask Surface = 1;
-
-        // [TitleGroup("Shape")]
-        // [EnableIf(nameof(NeedsSurface))]
-        [Range(.2f, 1)] public float SurfaceDistance = 1;
-
-        // [BoxGroup("Shape/Orientation")]
-        public bool MakeHorizontal;
-
-        [Range(0, 180)]
-
-        // [HorizontalGroup("Shape/Orientation/Angles")]
-        public float MaxPivotAngle = 30;
-
-        [Range(0, 180)]
-
-        // [HorizontalGroup("Shape/Orientation/Angles")]
-        public float MaxRollAngle = 30;
-
-        [Range(-1, 1)]
-
-        // [HorizontalGroup("Shape/Orientation/Angles")]
-        public float VerticalBias;
-
-        public Mesh[] MeshVariants;
+        [Tooltip("If any layer set: the branch will only grow if it can stick to surfaces on these layers")]
+        [SerializeField] LayerMask _surfaceLayers = 1;
+        [Tooltip("Maximum distance between the branch and the surface defined above")]
+        [SerializeField] float _surfaceDistance = 1;
+        
+        [Tooltip("Branches are randomly rotated (relative to their socket rotation). By how much?")]
+        [Range(0, 180)] [SerializeField] float _maxPivotAngle = 30;
+        [Tooltip("Branches are randomly rolled (around the Z-axis). By how much?")]
+        [Range(0, 180)] [SerializeField] float _maxRollAngle = 30;
+        [Tooltip("After random rotation, should the branches be tilted towards the sky?")]
+        [Range(-1, 1)] [SerializeField] float _growUpwards;
+        [Tooltip("After selecting a random direction for the branch, roll it (around the Z axis) to make " +
+                 "its up-vector face upwards.")]
+        [SerializeField] bool _faceUpwards;
+        
+        [SerializeField] Mesh[] _meshVariants;
 
         #endregion
 
@@ -89,6 +63,39 @@ namespace games.noio.planter
 
         #region PROPERTIES
 
+        [Tooltip("How much of the plant can be made up of this type of branch")]
+        public float QuotaPercent => _quotaPercent;
+
+        [Tooltip("How many other branches (of any type) should the plant have, before" +
+                 "this type of branch can grow")]
+        public int MinTotalOtherBranches => _minTotalOtherBranches;
+
+        [Tooltip("The plant will not grow through colliders on these layers")]
+        public LayerMask ObstacleLayers => _obstacleLayers;
+
+        public bool NeedsSurface => _surfaceLayers != 0;
+        public LayerMask SurfaceLayers => _surfaceLayers;
+
+        // [TitleGroup("Shape")]
+        // [EnableIf(nameof(NeedsSurface))]
+        public float SurfaceDistance => _surfaceDistance;
+
+        // [BoxGroup("Shape/Orientation")]
+        public bool FaceUpwards => _faceUpwards;
+        public float MaxPivotAngle => _maxPivotAngle;
+        public float MaxRollAngle => _maxRollAngle;
+
+        // [HorizontalGroup("Shape/Orientation/Angles")]
+        public float GrowUpwards => _growUpwards;
+
+        // [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
+        public int DepthMin => _depthMin;
+
+        // [TitleGroup("Shape")]
+        public int DepthMax => _depthMax;
+
+        // [TitleGroup("Shape")]
+        public int MaxCount => _maxCount;
         public List<BranchSocket> Sockets { get; private set; }
 
         public CapsuleCollider Capsule
@@ -122,20 +129,20 @@ namespace games.noio.planter
 
         public Mesh GetMeshVariant(int variant)
         {
-            return MeshVariants.Length == 0
+            return _meshVariants.Length == 0
                 ? GetComponent<MeshFilter>().sharedMesh
-                : MeshVariants[variant % MeshVariants.Length];
+                : _meshVariants[variant % _meshVariants.Length];
         }
 
         public Mesh GetRandomMeshVariant()
         {
-            if (MeshVariants.Length == 0)
+            if (_meshVariants.Length == 0)
             {
                 return GetComponent<MeshFilter>().sharedMesh;
             }
 
-            var idx = Random.Range(0, MeshVariants.Length);
-            return MeshVariants[idx];
+            var idx = Random.Range(0, _meshVariants.Length);
+            return _meshVariants[idx];
         }
 
         public Branch CreateBranch()
@@ -279,7 +286,8 @@ namespace games.noio.planter
             go.transform.SetParent(transform, false);
             go.transform.localPosition = Vector3.forward;
             var socket = go.AddComponent<BranchSocket>();
-            socket.BranchOptions = new List<BranchTemplate> { this };
+
+            // socket.BranchOptions = new List<BranchTemplate> { this };
             socket.OnBranchOptionsChanged();
         }
 

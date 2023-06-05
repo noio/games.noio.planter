@@ -29,5 +29,27 @@ namespace games.noio.planter
         public Branch[] Children => _children;
 
         #endregion
+
+        public bool HasOpenSockets()
+        {
+            var depthOfChildren = Depth + 1;
+            for (var i = 0; i < Template.Sockets.Count; i++)
+            {
+                if (Children[i] == null)
+                {
+                    var socket = Template.Sockets[i];
+                    foreach (var childBranchTemplate in socket.BranchOptions)
+                    {
+                        if (depthOfChildren >= childBranchTemplate.DepthMin &&
+                            depthOfChildren <= childBranchTemplate.DepthMax)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
     }
 }
