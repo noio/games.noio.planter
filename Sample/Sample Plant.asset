@@ -12,7 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c70efdd3fe914358b3a98fd3479269a6, type: 3}
   m_Name: Sample Plant
   m_EditorClassIdentifier: 
-  _rootBranch: {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf,
+  _rootBranch: {fileID: 6838132298060743433, guid: 9f34da0c83cc74d78805ac635fb51ec5,
     type: 3}
   _maxTotalBranches: 250
-  MaxGrowAttempts: 5000

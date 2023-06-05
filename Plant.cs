@@ -11,8 +11,6 @@ namespace games.noio.planter
     [ExecuteInEditMode]
     public class Plant : MonoBehaviour
     {
-        const uint MaxBranches = 4;
-        const uint MaxDepth = 12;
         static readonly Collider[] ColliderCache = new Collider[2];
 
         #region PUBLIC AND SERIALIZED FIELDS
@@ -22,11 +20,9 @@ namespace games.noio.planter
 
         #endregion
 
-        List<Branch> _branches = new();
-
-        // Queue<(uint Address, int Mask)> _openSockets = new();
-        Queue<Branch> _branchesWithOpenSockets = new();
-        List<BranchType> _branchTypes = new();
+        List<Branch> _branches;
+        Queue<Branch> _branchesWithOpenSockets;
+        List<BranchType> _branchTypes;
         List<BranchType> _growableBranchTypes;
         int _nextSocketIndex;
         Vector3 _settledPosition;
@@ -35,12 +31,6 @@ namespace games.noio.planter
 
         public int Variant { get; private set; }
         public bool Initialized { get; private set; }
-
-        // [TitleGroup("Status")]
-        // [ShowInInspector]
-        // [PropertyOrder(1)]
-        // [ProgressBar(0, nameof(MaxStoredEnergy), 0.62f, 1f, 0.45f)]
-        // [ShowIf(nameof(Initialized))]
         public bool AllSocketsFilled => AnyOpenSocketsLeft == false;
         public bool GrowthBlocked { get; private set; }
         public int BranchCount => _branches.Count;
@@ -50,24 +40,21 @@ namespace games.noio.planter
         /// </summary>
         public bool FullyGrown => AllSocketsFilled || GrowthBlocked;
 
-        // [TitleGroup("Status")]
-        // [ShowInInspector]
-        // [PropertyOrder(2)]
-        // [ProgressBar(-10, nameof(MaxGrowAttempts), 0.95f, 0.68f, 0.37f)]
-        // [ShowIf(nameof(Initialized))]
         public int FailedGrowAttempts { get; private set; }
 
         bool AnyOpenSocketsLeft => (_branchTypes?.Any(bt => bt.Growable) ?? false) &&
                                    _branchesWithOpenSockets?.Count > 0;
 
-        /// <summary>
-        ///     A mask indicating which branch types
-        ///     can currently be grown
-        /// </summary>
-
-        // int GrowableBranchTypeMask { get; set; }
-
         #endregion
+
+        /// <summary>
+        /// Always called before growing to see if the caches are there,
+        /// if not, rebuild them from the game object hierarchy.
+        /// Also checks if a rootnode and a species is set of course
+        /// </summary>
+        public void CheckRebuildCache()
+        {
+        }
 
         public void ClearAndInitialize()
         {
@@ -92,13 +79,7 @@ namespace games.noio.planter
                 DestroyImmediate(child.gameObject);
             }
 
-            AddBranch(new Branch
-            {
-                Depth = 0,
-                GameObject = null,
-                BranchType = _branchTypes[0], // root branch type is always first
-                RelRotation = Quaternion.identity
-            });
+            AddBranch(null, 0, _branchTypes[0], Vector3.zero, Quaternion.identity);
 
             /*
              * Need to completely rebuild the OpenSockets Queue.
@@ -179,8 +160,6 @@ namespace games.noio.planter
                 return;
             }
 
-            // Debug.Log($"Added branch type to {name}: {template.name}");
-
             if (_branchTypes.Count >= 32)
             {
                 /*
@@ -193,7 +172,7 @@ namespace games.noio.planter
 
             template.Preprocess();
 
-            var branchType = new BranchType(template, 1 << _branchTypes.Count);
+            var branchType = new BranchType(template);
 
             _branchTypes.Add(branchType);
 
@@ -206,55 +185,17 @@ namespace games.noio.planter
             }
         }
 
-        class Branch
-        {
-            #region PUBLIC AND SERIALIZED FIELDS
-
-            public BranchType BranchType;
-            public GameObject GameObject;
-            public Branch Parent;
-            public Branch[] Children = new Branch[4];
-
-            /*
-             * Position and rotation of the node relative
-             * to the RootTransform of the plant
-             * (the transform of the RootTransform GameObject)
-             * (not to the parent node!)
-             */
-            public Vector3 RelPosition;
-            public Quaternion RelRotation;
-            public int Depth { get; set; }
-
-            #endregion
-
-            public IEnumerator<int> OpenSockets()
-            {
-                for (int i = 0; i < 4; i++)
-                {
-                    if (Children[i] == null)
-                    {
-                        yield return i;
-                    }
-                }
-            }
-        }
-
         class BranchType
         {
             #region PUBLIC AND SERIALIZED FIELDS
 
             public readonly BranchTemplate Template;
-            public readonly int BitMask;
 
             #endregion
 
-            public BranchType(BranchTemplate template, int bitMask)
+            public BranchType(BranchTemplate template)
             {
                 Template = template;
-                BitMask = bitMask;
-
-                // var mask = Convert.ToString(BitMask, 2).PadLeft(8, '0');
-                // Debug.Log($"Create BranchTypeCache for {Template.name}. Mask: {mask}");
             }
 
             #region PROPERTIES
@@ -344,11 +285,11 @@ namespace games.noio.planter
             BranchSocket openSocket = null;
             while (openSocket == null)
             {
-                if (_nextSocketIndex < parent.BranchType.Template.Sockets.Count)
+                if (_nextSocketIndex < parent.Template.Sockets.Count)
                 {
                     if (parent.Children[_nextSocketIndex] == null)
                     {
-                        openSocket = parent.BranchType.Template.Sockets[_nextSocketIndex];
+                        openSocket = parent.Template.Sockets[_nextSocketIndex];
                     }
                     else
                     {
@@ -399,7 +340,8 @@ namespace games.noio.planter
             var template = branchType.Template;
 
             // var parent = _branches[GetParentAddress(address)];
-            GetSocketPositionAndRotation(parent, _nextSocketIndex, out var socketPos, out var socketRot);
+            GetSocketPositionAndRotation(parent, _nextSocketIndex,
+                out var socketLocalPos, out var socketLocalRot);
 
             // var parent = GetParentAndSocketPosition(address, out var socketRelPos, out var parentRelRot);
 
@@ -408,9 +350,17 @@ namespace games.noio.planter
             var yRot = Random.Range(-template.MaxPivotAngle, template.MaxPivotAngle);
             var zRot = Random.Range(-template.MaxRollAngle, template.MaxRollAngle);
 
+            /*
+             * We do all rotation operations on a global rotation here,
+             * because we want to manipulate it in world space.
+             * yaw/pivot/roll are local, but the VerticalBias represents
+             * gravity which is a world space transform.
+             * When we create a branch we transform it back to a local
+             * rotation (relative to the parent socket)
+             */
             var pivot = Quaternion.Euler(xRot, yRot, 0);
-            var globalRot = _rootTransform.rotation * socketRot * pivot;
-            var globalPos = _rootTransform.TransformPoint(socketPos);
+            var globalRot = parent.transform.rotation * socketLocalRot * pivot;
+            var globalPos = parent.transform.TransformPoint(socketLocalPos);
 
             if (template.VerticalBias < 0)
             {
@@ -431,18 +381,16 @@ namespace games.noio.planter
             var roll = RotateAroundZ(zRot * Mathf.Deg2Rad);
             globalRot *= roll;
 
-            if (CheckPlacement(globalPos, globalRot, template, false, parent.GameObject))
+            if (CheckPlacement(globalPos, globalRot, template, parent.gameObject))
             {
-                var branch = new Branch
-                {
-                    Depth = parent.Depth + 1,
-                    Parent = parent,
-                    BranchType = branchType,
-                    RelPosition = socketPos,
-                    RelRotation = Quaternion.Inverse(_rootTransform.rotation) * globalRot
-                };
+                var branch = AddBranch(parent, _nextSocketIndex, branchType,
+                    socketLocalPos, Quaternion.Inverse(parent.transform.rotation) * globalRot);
 
-                parent.Children[_nextSocketIndex] = branch;
+                if (HasOpenSockets(branch))
+                {
+                    _branchesWithOpenSockets.Enqueue(branch);
+                }
+
                 if (HasOpenSockets(parent) == false)
                 {
                     /*
@@ -451,12 +399,6 @@ namespace games.noio.planter
                      */
                     _nextSocketIndex = 0;
                     _branchesWithOpenSockets.Dequeue();
-                }
-
-                AddBranch(branch);
-                if (HasOpenSockets(branch))
-                {
-                    _branchesWithOpenSockets.Enqueue(branch);
                 }
 
                 FailedGrowAttempts = 0;
@@ -499,11 +441,11 @@ namespace games.noio.planter
         bool HasOpenSockets(Branch newBranch)
         {
             var depthOfChildren = newBranch.Depth + 1;
-            for (var i = 0; i < newBranch.BranchType.Template.Sockets.Count; i++)
+            for (var i = 0; i < newBranch.Template.Sockets.Count; i++)
             {
                 if (newBranch.Children[i] == null)
                 {
-                    var socket = newBranch.BranchType.Template.Sockets[i];
+                    var socket = newBranch.Template.Sockets[i];
                     foreach (var childBranchTemplate in socket.BranchOptions)
                     {
                         if (depthOfChildren >= childBranchTemplate.DepthMin &&
@@ -519,10 +461,9 @@ namespace games.noio.planter
         }
 
         static bool CheckPlacement(
-            Vector3 globalPos,  Quaternion globalRot, BranchTemplate template,
-            bool    isExisting, GameObject ignoredParent = null)
+            Vector3 globalPos, Quaternion globalRot, BranchTemplate template, GameObject ignoredParent = null)
         {
-            if (CheckIfAreaClear(globalPos, globalRot, template, isExisting, ignoredParent) == false)
+            if (CheckIfAreaClear(globalPos, globalRot, template, ignoredParent) == false)
             {
                 return false;
             }
@@ -537,8 +478,7 @@ namespace games.noio.planter
         }
 
         static bool CheckIfAreaClear(
-            Vector3 globalPos,  Quaternion globalRot, BranchTemplate template,
-            bool    isExisting, GameObject ignoredParent = null)
+            Vector3 globalPos, Quaternion globalRot, BranchTemplate template, GameObject ignoredParent = null)
         {
             var radius = template.Capsule.radius;
             var height = template.Capsule.height;
@@ -550,34 +490,6 @@ namespace games.noio.planter
             var end = globalPos + dir * endDist;
 
             var occupied = template.Avoids;
-            if (isExisting)
-            {
-                /*
-                 * If checking placement of an existing plant it should not be
-                 * bothered by its own presence. In other words:
-                 * normally plants don't grow inside other plants, but
-                 * if a branch is already placed, it should not be
-                 * bothered by its own existence.
-                 *
-                 * The way this is implemented is per layer: so it will not
-                 * be bothered by *anything* on its own layer.
-                 */
-                // occupied &= ~(1 << template.gameObject.layer);
-                /*
-                 * The above is flexible, but it breaks when the plant is on different
-                 * layers (Fruit and Plant). So for now, those two layers
-                 * are just hardcoded.
-                 *
-                 * The problem is that there is ANOTHER behavior that relies on this one.
-                 * The fact that branches can overlap with their PARENT, without being
-                 * removed. When checking for a NEW branch, this works through the
-                 * 'ignoredParent' parameter; when checking EXISTING branches,
-                 * it is the code below that provides 'immunity' from parent overlap.
-                 * So if the branch and parent are on different layers, that is why
-                 * the above breaks (And I had to hardcode Plants & Fruit layers here)
-                 */
-                // occupied &= ~((1 << Layers.Plants) | (1 << Layers.Fruit));
-            }
 
             if (ignoredParent == null)
             {
@@ -624,24 +536,25 @@ namespace games.noio.planter
             return count > 0 ? ColliderCache[0] : null;
         }
 
-        void GetSocketPositionAndRotation(Branch parent,
-            int                                  socketIndex,
-            out Vector3                          socketPos,
-            out Quaternion                       socketRot)
+        void GetSocketPositionAndRotation(
+            Branch         parent,
+            int            socketIndex,
+            out Vector3    socketLocalPos,
+            out Quaternion socketLocalRot)
         {
-            if (socketIndex >= parent.BranchType.Template.Sockets.Count)
+            if (socketIndex >= parent.Template.Sockets.Count)
             {
                 Debug.LogError(
-                    $"Branch for nonexisting socket {socketIndex + 1} on {parent.BranchType.Template.name}");
-                socketPos = Vector3.zero;
-                socketRot = Quaternion.identity;
+                    $"Branch for nonexisting socket {socketIndex + 1} on {parent.Template.name}");
+                socketLocalPos = Vector3.zero;
+                socketLocalRot = Quaternion.identity;
                 return;
             }
 
-            var socket = parent.BranchType.Template.Sockets[socketIndex];
+            var socket = parent.Template.Sockets[socketIndex];
             var socketTransform = socket.transform;
-            socketPos = parent.RelPosition + parent.RelRotation * socketTransform.localPosition;
-            socketRot = parent.RelRotation * socketTransform.localRotation;
+            socketLocalPos = socketTransform.localPosition;
+            socketLocalRot = socketTransform.localRotation;
         }
 
         #region MODIFICATION
@@ -656,45 +569,99 @@ namespace games.noio.planter
             return a;
         }
 
-        void AddBranch(Branch branch)
+        Branch AddBranch(
+            Branch     parent,
+            int        socketIndex,
+            BranchType branchType,
+            Vector3    localPosition,
+            Quaternion localRotation)
         {
             var branchVariant = Variant + _branches.Count;
 
-            var go = branch.GameObject;
-            if (go == null)
+            var branch = branchType.Template.CreateBranch(branchVariant);
+            var branchTransform = branch.transform;
+
+            if (parent != null)
             {
-                go = branch.BranchType.Template.CreateInstance(branchVariant);
-                go.transform.parent = branch.Parent != null
-                    ? branch.Parent.GameObject.transform
-                    : _rootTransform;
+                parent.Children[socketIndex] = branch;
+                branch.transform.SetParent(parent.transform, false);
+                branch.Depth = parent.Depth + 1;
+            }
+            else
+            {
+                branchTransform.SetParent(_rootTransform, false);
+                ;
             }
 
-            go.transform.localPosition = branch.RelPosition;
-            go.transform.localRotation = branch.RelRotation;
+            branchTransform.SetLocalPositionAndRotation(localPosition, localRotation);
 
-            branch.GameObject = go;
+            branch.Template = branchType.Template;
 
             _branches.Add(branch);
-            branch.BranchType.TotalCount++;
+            branchType.TotalCount++;
+            return branch;
         }
 
         #endregion
 
-        #region EDITOR_ACTIONS
 
-#if UNITY_EDITOR
-        GUIStyle _richTextMiniLabelStyle;
+        /// <summary>
+        /// Checks if a Species is set, and if a RootNode is
+        /// created & set. Will create a rootnode if none is set.
+        /// </summary>
+        void CheckSetup()
+        {
+            if (_species == null)
+            {
+                throw new Exception($"Create and set a {nameof(PlantSpecies)} on Plant \"{name}\"");
+            }
 
-        // [TitleGroup("Actions")]
-        // [HorizontalGroup("Actions/Buttons")]
-        // [Button]
+            if (_species.RootBranch == null)
+            {
+                throw new Exception(
+                    $"Create and set a RootNode ({nameof(BranchTemplate)}) on Species \"{_species}\"");
+            }
+        }
+
         public void Reset()
         {
-// ReSharper disable once Unity.NoNullPropagation
-            Assert.IsTrue(_species?.RootBranch != null);
-            /*
-             * Reset to prefab mode completely
-             */
+            CheckSetup();
+
+            if (_rootTransform != null)
+            {
+                /*
+                 * Clear out the nodes
+                 */
+                for (var i = _rootTransform.childCount - 1; i >= 0; i--)
+                {
+                    var child = _rootTransform.GetChild(i);
+                    DestroyImmediate(child.gameObject);
+                }
+            }
+            else
+            {
+                /*
+                 * If the RootTransform is not set, actually clear out ALL
+                 * children of this GameObject
+                 */
+                for (int i = transform.childCount - 1; i >= 0; i--)
+                {
+                    var child = transform.GetChild(i);
+                    DestroyImmediate(child.gameObject);
+                }
+            }
+            
+            CreateRootTransform();
+
+            _branches?.Clear();
+            _branchTypes?.Clear();
+            
+            Initialized = false;
+            Unblock();
+        }
+
+        void BuildCaches()
+        {
             if (_branchTypes != null)
             {
                 foreach (var pair in _branchTypes)
@@ -702,14 +669,17 @@ namespace games.noio.planter
                     pair.Template.Preprocess(true);
                 }
             }
+        }
 
-// ReSharper disable once Unity.NoNullPropagation
+        void CreateRootTransform()
+        {
             if (_species?.RootBranch != null)
             {
                 if (_rootTransform == null)
                 {
                     _rootTransform = new GameObject("Root Transform").transform;
                     _rootTransform.SetParent(transform, false);
+                    _rootTransform.rotation = Quaternion.Euler(-90, 0, 0);
                 }
 
                 // name = Definition.RootNode.name.Split(' ')[0];
@@ -719,7 +689,7 @@ namespace games.noio.planter
                     meshFilter = _rootTransform.gameObject.AddComponent<MeshFilter>();
                 }
 
-                meshFilter.sharedMesh = _species.RootBranch.GetComponent<MeshFilter>().sharedMesh;
+                meshFilter.sharedMesh = _species.RootBranch.GetMeshVariant(0);
 
                 if (_rootTransform.TryGetComponent(out MeshRenderer meshRenderer) == false)
                 {
@@ -730,20 +700,6 @@ namespace games.noio.planter
                 meshRenderer.sharedMaterials =
                     _species.RootBranch.GetComponent<MeshRenderer>().sharedMaterials;
             }
-
-            /*
-             * Clear out the nodes
-             */
-            for (var i = _rootTransform.childCount - 1; i >= 0; i--)
-            {
-                var child = _rootTransform.GetChild(i);
-                DestroyImmediate(child.gameObject);
-            }
-
-            _branches?.Clear();
-            _branchTypes?.Clear();
-            Initialized = false;
-            Unblock();
         }
 
         public void Grow()
@@ -807,64 +763,5 @@ namespace games.noio.planter
 
             return true;
         }
-
-        // [BoxGroup("Status/Status", false)]
-        // [PropertyOrder(0)]
-        // [ShowInInspector]
-        // [GUIColor(nameof(StatusColor))]
-        string Status =>
-            Initialized
-                ? AllSocketsFilled ? "Fully Grown" :
-                GrowthBlocked ? "Blocked" : "Growing"
-                : "Prefab";
-
-        Color StatusColor => Initialized
-            ? AllSocketsFilled ? new Color(0.38f, 1f, 0.36f) :
-            GrowthBlocked ? new Color(1f, 0.39f, 0.37f) : new Color(0.73f, 1f, 0.74f)
-            : new Color(0.55f, 0.66f, 1f);
-
-        // [TitleGroup("Status")]
-        // [PropertyOrder(3)]
-        // [ShowIf(nameof(Initialized))]
-        // [OnInspectorGUI]
-        // void DrawStatus()
-        // {
-        //     var gray = Color.gray;
-        //
-        //     // var green = EditorColors.Green.Hex();
-        //
-        //     using (new EditorGUI.DisabledScope(true))
-        //     {
-        //         EditorGUILayout.IntField("Total Branches", _branches?.Count ?? 0);
-        //         EditorGUILayout.IntField("Open Sockets", _branchesWithOpenSockets?.Count ?? 0);
-        //     }
-        //
-        //     if (this != null)
-        //     {
-        //         foreach (var branchType in _branchTypes ?? Enumerable.Empty<BranchType>())
-        //         {
-        //             GUIHelper.PushColor(branchType.Growable
-        //                 ? new Color(0.76f, 1f, 0.78f)
-        //                 : Color.white);
-        //             SirenixEditorGUI.BeginBox();
-        //             using (new EditorGUILayout.HorizontalScope())
-        //             {
-        //                 var label = branchType.Template.name;
-        //
-        //                 GUILayout.Label(label, EditorStyles.miniLabel,
-        //                     GUILayout.Width(EditorGUIUtility.labelWidth));
-        //                 GUILayout.Label(
-        //                     $"{branchType.TotalCount} <color={gray}>/ {branchType.Template.MaxCount}</color>",
-        //                     RichTextMiniLabelStyle);
-        //             }
-        //
-        //             SirenixEditorGUI.EndBox();
-        //             GUIHelper.PopColor();
-        //         }
-        //     }
-        // }
-#endif
-
-        #endregion // EDITOR
     }
 }

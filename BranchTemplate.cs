@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+
 // using Sirenix.OdinInspector;
 // using Sirenix.Utilities.Editor;
 using UnityEditor;
@@ -15,13 +16,16 @@ namespace games.noio.planter
         #region PUBLIC FIELDS
 
         [FormerlySerializedAs("NodeDepth")]
+
         // [TitleGroup("Shape", "Parameters that define where & how a plant grows")]
         public int DepthMin;
 
         // [TitleGroup("Shape")]
         public int DepthMax = 12;
+
         // [TitleGroup("Shape")]
         public int MaxCount = 100;
+
 // #if UNITY_EDITOR
         // [CustomValueDrawer(nameof(MaxQuotaPercentage))]
 // #endif
@@ -55,21 +59,23 @@ namespace games.noio.planter
 
         // [TitleGroup("Shape")]
         // [EnableIf(nameof(NeedsSurface))]
-        [Range(.2f, 1)]
-        public float SurfaceDistance = 1;
+        [Range(.2f, 1)] public float SurfaceDistance = 1;
 
         // [BoxGroup("Shape/Orientation")]
         public bool MakeHorizontal;
 
         [Range(0, 180)]
+
         // [HorizontalGroup("Shape/Orientation/Angles")]
         public float MaxPivotAngle = 30;
 
         [Range(0, 180)]
+
         // [HorizontalGroup("Shape/Orientation/Angles")]
         public float MaxRollAngle = 30;
 
         [Range(-1, 1)]
+
         // [HorizontalGroup("Shape/Orientation/Angles")]
         public float VerticalBias;
 
@@ -97,7 +103,6 @@ namespace games.noio.planter
                 return _capsuleCollider;
             }
         }
-
 
         #endregion
 
@@ -127,48 +132,34 @@ namespace games.noio.planter
             }
         }
 
-        public GameObject CreateInstance(int variant)
+        public Branch CreateBranch(int variant)
         {
             Assert.IsTrue(_preprocessed, $"{name} has not been Preprocessed");
 
             _renderer = _renderer ? _renderer : GetComponent<Renderer>();
 
-            GameObject created;
-#if UNITY_EDITOR
-            if (Application.isPlaying == false)
-            {
-                // The object is already an instance, so materials etc. are already correct
-                // this call to Apply below is only to set a  _variation_
-                var instance = PrefabUtility.InstantiatePrefab(gameObject);
-                created = (GameObject)instance;
-                var meshFilter = created.GetComponent<MeshFilter>();
-                if (MeshVariants.Length > 0)
-                {
-                    meshFilter.sharedMesh = GetMeshVariant(variant);
-                }
-            }
+            var created = new GameObject { name = name, layer = gameObject.layer };
+            
+            var branch = created.AddComponent<Branch>();
+            
+            var meshFilter = created.AddComponent<MeshFilter>();
+            meshFilter.sharedMesh = GetMeshVariant(variant);
 
-            else
-#endif
-            {
-                created = new GameObject { name = name, layer = gameObject.layer };
-                var meshFilter = created.AddComponent<MeshFilter>();
-                meshFilter.sharedMesh = GetMeshVariant(variant);
+            var newRenderer = created.AddComponent<MeshRenderer>();
+            newRenderer.sharedMaterials = _renderer.sharedMaterials;
+            newRenderer.shadowCastingMode = _renderer.shadowCastingMode;
 
-                var newRenderer = created.AddComponent<MeshRenderer>();
-                newRenderer.sharedMaterials = _renderer.sharedMaterials;
-                newRenderer.shadowCastingMode = _renderer.shadowCastingMode;
+            var newCapsuleCollider = created.AddComponent<CapsuleCollider>();
+            newCapsuleCollider.center = Capsule.center;
+            newCapsuleCollider.direction = Capsule.direction;
+            newCapsuleCollider.height = Capsule.height;
+            newCapsuleCollider.radius = Capsule.radius;
+            newCapsuleCollider.direction = Capsule.direction;
+            newCapsuleCollider.sharedMaterial = Capsule.sharedMaterial;
 
-                var newCapsuleCollider = created.AddComponent<CapsuleCollider>();
-                newCapsuleCollider.center = Capsule.center;
-                newCapsuleCollider.direction = Capsule.direction;
-                newCapsuleCollider.height = Capsule.height;
-                newCapsuleCollider.radius = Capsule.radius;
-                newCapsuleCollider.direction = Capsule.direction;
-                newCapsuleCollider.sharedMaterial = Capsule.sharedMaterial;
-            }
-
-            return created;
+            
+            
+            return branch;
         }
 
         public void Preprocess(bool force = false)
@@ -265,6 +256,7 @@ namespace games.noio.planter
                             {
                                 GUILayout.Label(socket.name, GUILayout.Width(80));
                                 var branches = string.Join(", ", socket.BranchOptions.Select(o => o.name));
+
                                 // GUILayout.Label(branches, SirenixGUIStyles.BoldLabel);
                             }
                         }
