@@ -1,3 +1,10 @@
 .unity-progress-bar__progress {
     background-color: rgba(135, 166, 84, 0.98);
 }
+
+#definition-field > Label {
+}
+
+#unity-input-m_Script {
+    display: none;
+}

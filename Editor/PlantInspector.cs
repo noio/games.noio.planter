@@ -1,6 +1,6 @@
 using UnityEditor;
-using UnityEngine;
 using UnityEditor.UIElements;
+using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace games.noio.planter.Editor
@@ -8,7 +8,30 @@ namespace games.noio.planter.Editor
     [CustomEditor(typeof(Plant))]
     public class PlantInspector : UnityEditor.Editor
     {
+        #region PUBLIC AND SERIALIZED FIELDS
+
         [SerializeField] VisualTreeAsset _visualTree;
+
+        #endregion
+
+        #region MONOBEHAVIOUR METHODS
+
+        void OnEnable()
+        {
+            EditorApplication.update -= EditorUpdate;
+            EditorApplication.update += EditorUpdate;
+        }
+
+        void OnDisable()
+        {
+            EditorApplication.update += EditorUpdate;
+        }
+
+        void EditorUpdate()
+        {
+        }
+
+        #endregion
 
         public override VisualElement CreateInspectorGUI()
         {
@@ -22,17 +45,24 @@ namespace games.noio.planter.Editor
             var growButton = tree.Q<Button>("grow-button");
             growButton.clicked += () => plant.Grow();
 
-            var definitionInspector = tree.Q<VisualElement>("definition-inspector");
-            var definition = serializedObject.FindProperty("_definition");
-            if (definition != null)
+            var speciesInspector = tree.Q<VisualElement>("species-inspector");
+            var speciesProp = serializedObject.FindProperty("_species");
+            var species = speciesProp.objectReferenceValue as PlantSpecies;
+            if (species != null)
             {
-                Debug.Log($"hello: {definition.objectReferenceValue}");
-                var definitionSerializedObject = new SerializedObject(definition.objectReferenceValue);
-                Debug.Log($"{definitionSerializedObject}");
-                var defaultInspector = new VisualElement();
-                InspectorElement.FillDefaultInspector(defaultInspector, definitionSerializedObject, this);
-                tree.Add(defaultInspector);
+                var speciesEditor = CreateEditor(species);
+                var editorRoot = speciesEditor.CreateInspectorGUI();
+                speciesInspector.Add(editorRoot);
+                editorRoot.Bind(speciesEditor.serializedObject);
             }
+
+            // var definitionSerializedObject = new SerializedObject(plantDefinition, plantDefinition);
+            // Debug.Log($"Creating Inspector for: {plantDefinition}");
+            // var defaultInspector = new VisualElement();
+            // InspectorElement.FillDefaultInspector(defaultInspector, definitionSerializedObject,
+            // definitionEditor);
+            // tree.Add(defaultInspector);
+            // definitionField.style.width = objectField[0].style.width;
 
             // var defaultInspector = new VisualElement();
             // InspectorElement.FillDefaultInspector(defaultInspector, serializedObject, this);

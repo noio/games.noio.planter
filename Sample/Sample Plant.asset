@@ -12,11 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c70efdd3fe914358b3a98fd3479269a6, type: 3}
   m_Name: Sample Plant
   m_EditorClassIdentifier: 
-  RootNode: {fileID: 6838132298060743433, guid: 9f34da0c83cc74d78805ac635fb51ec5,
+  _rootBranch: {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf,
     type: 3}
-  MinPlantTilt: 0
-  MaxPlantTilt: 180
-  ColorA: {r: 0, g: 0, b: 0, a: 0}
-  ColorB: {r: 0, g: 0, b: 0, a: 0}
-  EnergyPerBranchInt: 100
+  _maxTotalBranches: 250
   MaxGrowAttempts: 5000
