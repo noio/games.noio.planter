@@ -122,28 +122,34 @@ namespace games.noio.planter
 
         public Mesh GetMeshVariant(int variant)
         {
+            return MeshVariants.Length == 0
+                ? GetComponent<MeshFilter>().sharedMesh
+                : MeshVariants[variant % MeshVariants.Length];
+        }
+
+        public Mesh GetRandomMeshVariant()
+        {
             if (MeshVariants.Length == 0)
             {
                 return GetComponent<MeshFilter>().sharedMesh;
             }
-            else
-            {
-                return MeshVariants[variant % MeshVariants.Length];
-            }
+
+            var idx = Random.Range(0, MeshVariants.Length);
+            return MeshVariants[idx];
         }
 
-        public Branch CreateBranch(int variant)
+        public Branch CreateBranch()
         {
             Assert.IsTrue(_preprocessed, $"{name} has not been Preprocessed");
 
             _renderer = _renderer ? _renderer : GetComponent<Renderer>();
 
             var created = new GameObject { name = name, layer = gameObject.layer };
-            
+
             var branch = created.AddComponent<Branch>();
-            
+
             var meshFilter = created.AddComponent<MeshFilter>();
-            meshFilter.sharedMesh = GetMeshVariant(variant);
+            meshFilter.sharedMesh = GetRandomMeshVariant();
 
             var newRenderer = created.AddComponent<MeshRenderer>();
             newRenderer.sharedMaterials = _renderer.sharedMaterials;
@@ -157,8 +163,6 @@ namespace games.noio.planter
             newCapsuleCollider.direction = Capsule.direction;
             newCapsuleCollider.sharedMaterial = Capsule.sharedMaterial;
 
-            
-            
             return branch;
         }
 

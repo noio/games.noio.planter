@@ -29,9 +29,8 @@ namespace games.noio.planter
 
         #region PROPERTIES
 
-        public int Variant { get; private set; }
-        public bool Initialized { get; private set; }
-        public bool AllSocketsFilled => AnyOpenSocketsLeft == false;
+        public bool AllSocketsFilled => ((_branchTypes?.Any(bt => bt.Growable) ?? false) &&
+                                         _branchesWithOpenSockets?.Count > 0) == false;
         public bool GrowthBlocked { get; private set; }
         public int BranchCount => _branches.Count;
 
@@ -47,48 +46,80 @@ namespace games.noio.planter
 
         #endregion
 
-        /// <summary>
-        /// Always called before growing to see if the caches are there,
-        /// if not, rebuild them from the game object hierarchy.
-        /// Also checks if a rootnode and a species is set of course
-        /// </summary>
-        public void CheckRebuildCache()
+        public void PrepareForGrowing()
         {
-        }
-
-        public void ClearAndInitialize()
-        {
-            DisableRootPlaceholderRenderer();
-
-            _branchTypes = new List<BranchType>();
-            _branches = new List<Branch>();
-
-            _branchesWithOpenSockets = new Queue<Branch>();
-            _growableBranchTypes = new List<BranchType>();
-
-            PreprocessBranchType(_species.RootBranch);
-
-            Variant = Random.Range(0, 17);
-
-            /*
-             * Clear out the nodes
-             */
-            for (var i = _rootTransform.childCount - 1; i >= 0; i--)
+            CheckSetup();
+            
+            if (IsCacheValid() == false)
             {
-                var child = _rootTransform.GetChild(i);
-                DestroyImmediate(child.gameObject);
+                /*
+                 * Try to reconstruct cache from Game Object Hierarchy
+                 */
+                TryReconstructCacheFromHierarchy();
             }
 
-            AddBranch(null, 0, _branchTypes[0], Vector3.zero, Quaternion.identity);
-
             /*
-             * Need to completely rebuild the OpenSockets Queue.
+             * Reconstructing from gameobject hierarchy didn't work
+             * (or the GO is just empty)
              */
-            _branchesWithOpenSockets.Enqueue(_branches[0]);
-            SetGrowableBranchTypes();
-
-            Initialized = true;
+            if (IsCacheValid() == false)
+            {
+                Reset(); // also clears cache
+            }
+            
             Unblock();
+        }
+
+        bool TryReconstructCacheFromHierarchy()
+        {
+            ClearCache();
+                          
+            PreprocessBranchType(_species.RootBranch);
+
+            foreach (var branch in GetComponentsInChildren<Branch>())
+            {
+                var branchType = _branchTypes.FirstOrDefault(bt => bt.Template == branch.Template);
+                if (branchType == null)
+                {
+                    /*
+                     * Clear cache to make sure it's invalid and calling
+                     * function will proceed with rebuilding from scratch
+                     */
+                    ClearCache();
+                    return false;
+                }
+
+                branchType.TotalCount++;
+                
+                _branches.Add(branch);
+                if (HasOpenSockets(branch))
+                {
+                    _branchesWithOpenSockets.Enqueue(branch);
+                }
+            }
+            
+            UpdateGrowableBranchTypes();
+            return true;
+        }
+
+        void ClearCache()
+        {
+            _branchTypes?.Clear();
+            _branchTypes ??= new List<BranchType>();
+            
+            _branches?.Clear();
+            _branches ??= new List<Branch>();
+            
+            _branchesWithOpenSockets?.Clear();
+            _branchesWithOpenSockets ??= new Queue<Branch>();
+            
+            _growableBranchTypes?.Clear();
+            _growableBranchTypes ??= new List<BranchType>();
+        }
+
+        bool IsCacheValid()
+        {
+            return _branchTypes is { Count: > 0 } && _branches is { Count: > 0 };
         }
 
         /// <summary>
@@ -103,26 +134,6 @@ namespace games.noio.planter
             while (steps-- > 0)
             {
                 SettleStep(lerpAmount);
-            }
-        }
-
-        void DisableRootPlaceholderRenderer()
-        {
-            if (_rootTransform.TryGetComponent<MeshRenderer>(out var meshRenderer))
-            {
-                /*
-                 * The MeshRenderer on the RootTransform is only for previewing in
-                 * the Editor.
-                 * In playmode, just get rid of it.
-                 */
-                if (Application.isPlaying)
-                {
-                    Destroy(meshRenderer);
-                }
-                else
-                {
-                    meshRenderer.enabled = false;
-                }
             }
         }
 
@@ -239,7 +250,7 @@ namespace games.noio.planter
                      * When adding a branch, there might
                      * now be other branches that are growable
                      */
-                    SetGrowableBranchTypes();
+                    UpdateGrowableBranchTypes();
 
                     return true;
                 }
@@ -410,7 +421,7 @@ namespace games.noio.planter
             return null;
         }
 
-        void SetGrowableBranchTypes()
+        void UpdateGrowableBranchTypes()
         {
             foreach (var branchType in _branchTypes)
             {
@@ -576,9 +587,7 @@ namespace games.noio.planter
             Vector3    localPosition,
             Quaternion localRotation)
         {
-            var branchVariant = Variant + _branches.Count;
-
-            var branch = branchType.Template.CreateBranch(branchVariant);
+            var branch = branchType.Template.CreateBranch();
             var branchTransform = branch.transform;
 
             if (parent != null)
@@ -590,11 +599,11 @@ namespace games.noio.planter
             else
             {
                 branchTransform.SetParent(_rootTransform, false);
-                ;
             }
 
             branchTransform.SetLocalPositionAndRotation(localPosition, localRotation);
 
+            branch.name = $"D{branch.Depth} {branchType.Template.name}";
             branch.Template = branchType.Template;
 
             _branches.Add(branch);
@@ -603,7 +612,6 @@ namespace games.noio.planter
         }
 
         #endregion
-
 
         /// <summary>
         /// Checks if a Species is set, and if a RootNode is
@@ -650,26 +658,17 @@ namespace games.noio.planter
                     DestroyImmediate(child.gameObject);
                 }
             }
-            
-            CreateRootTransform();
 
-            _branches?.Clear();
-            _branchTypes?.Clear();
-            
-            Initialized = false;
+            ClearCache();
+            CreateRootTransform();
+            PreprocessBranchType(_species.RootBranch);
+            AddBranch(null, 0, _branchTypes[0], Vector3.zero, Quaternion.identity);
+            _branchesWithOpenSockets.Enqueue(_branches[0]);
+            UpdateGrowableBranchTypes();
+
             Unblock();
         }
 
-        void BuildCaches()
-        {
-            if (_branchTypes != null)
-            {
-                foreach (var pair in _branchTypes)
-                {
-                    pair.Template.Preprocess(true);
-                }
-            }
-        }
 
         void CreateRootTransform()
         {
@@ -681,34 +680,12 @@ namespace games.noio.planter
                     _rootTransform.SetParent(transform, false);
                     _rootTransform.rotation = Quaternion.Euler(-90, 0, 0);
                 }
-
-                // name = Definition.RootNode.name.Split(' ')[0];
-
-                if (_rootTransform.TryGetComponent(out MeshFilter meshFilter) == false)
-                {
-                    meshFilter = _rootTransform.gameObject.AddComponent<MeshFilter>();
-                }
-
-                meshFilter.sharedMesh = _species.RootBranch.GetMeshVariant(0);
-
-                if (_rootTransform.TryGetComponent(out MeshRenderer meshRenderer) == false)
-                {
-                    meshRenderer = _rootTransform.gameObject.AddComponent<MeshRenderer>();
-                }
-
-                meshRenderer.enabled = true;
-                meshRenderer.sharedMaterials =
-                    _species.RootBranch.GetComponent<MeshRenderer>().sharedMaterials;
             }
         }
 
         public void Grow()
         {
-            if (Initialized == false)
-            {
-                ClearAndInitialize();
-                Debug.Log($"Initialized <b>{name}</b>");
-            }
+            PrepareForGrowing();
 
             for (int i = 0; i < 10; i++)
             {
@@ -724,7 +701,6 @@ namespace games.noio.planter
         bool GrowInEditor(int maxAttempts = 20)
         {
             Assert.IsFalse(Application.isPlaying, "Can't use this button in Play mode");
-            Assert.IsTrue(Initialized);
 
             if (GrowthBlocked)
             {
@@ -755,7 +731,7 @@ namespace games.noio.planter
                  */
                 if (SettleStep())
                 {
-                    ClearAndInitialize();
+                    PrepareForGrowing();
                 }
 
                 return false;
