@@ -1,7 +1,3 @@
-.field-align-right TextElement {
-    -unity-text-align: upper-right;
-}
-
 .section-box {
     flex-grow: 0;
     background-color: rgba(0, 0, 0, 0);
@@ -27,10 +23,12 @@
 
 .section-box .header {
     -unity-font-style: bold;
+    margin-bottom: 3px;
 }
 
 .section-box .description {
     -unity-font-style: italic;
     font-size: 11px;
     -unity-text-align: middle-left;
+    margin-bottom: 3px;
 }

@@ -1,5 +1,6 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/BranchSocketOption.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchSocketOption" />
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/BranchOptionElement.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchOptionElement" />
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/SectionBox.uss?fileID=7433441132597879392&amp;guid=11fbe3c0348a1435881d7d26ef42bd78&amp;type=3#SectionBox" />
     <ui:VisualElement name="constraints" class="section-box">
         <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-self: stretch; justify-content: space-between; margin-left: 2px; margin-right: 0; margin-top: 4px; margin-bottom: 4px;">
             <ui:Label tabindex="-1" text="Constraints" display-tooltip-when-elided="true" class="header" />
@@ -28,6 +29,17 @@
         <ui:Toggle label="Face Upwards" name="face-upwards" binding-path="_faceUpwards" class="unity-base-field__aligned" />
         <ui:Label tabindex="-1" text="Mesh Variants" display-tooltip-when-elided="true" style="margin-left: 3px; margin-top: 12px; margin-bottom: 2px;" />
         <ui:ListView focusable="true" binding-path="_meshVariants" show-bound-collection-size="false" show-add-remove-footer="true" reorderable="true" show-border="true" show-foldout-header="false" style="margin-left: 2px;" />
+    </ui:VisualElement>
+    <ui:VisualElement name="sockets" class="section-box">
+        <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-self: stretch; justify-content: space-between; margin-left: 2px; margin-right: 0; margin-top: 4px; margin-bottom: 4px;">
+            <ui:Label tabindex="-1" text="Sockets" display-tooltip-when-elided="true" class="header" />
+            <ui:Label tabindex="-1" text="Which branches grow from this one?" display-tooltip-when-elided="true" class="description" />
+        </ui:VisualElement>
+        <ui:VisualElement name="prefab-stage-warning" style="flex-grow: 1; flex-direction: row; align-items: center; justify-content: flex-start; border-left-width: 1px; border-right-width: 1px; border-top-width: 1px; border-bottom-width: 1px; border-left-color: rgb(83, 83, 83); border-right-color: rgb(83, 83, 83); border-top-color: rgb(83, 83, 83); border-bottom-color: rgb(83, 83, 83); border-top-left-radius: 4px; border-bottom-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; margin-left: 4px; margin-right: 4px; margin-top: 4px; margin-bottom: 4px;">
+            <ui:VisualElement style="flex-grow: 0; background-color: rgba(0, 0, 0, 0); width: 30px; height: 30px; background-image: url(&apos;project://database/Assets/UnityDefaultRuntimeTheme.tss?fileID=2346436936791262179&amp;guid=3a0e7b2d7c5184e4e8ebab20d52a99b5&amp;type=3#console.infoicon&apos;); margin-left: 4px; margin-right: 4px; margin-top: 4px; margin-bottom: 4px; flex-shrink: 0;" />
+            <ui:Label tabindex="-1" text="Sockets can only be created on opened prefab." display-tooltip-when-elided="true" style="flex-wrap: wrap; flex-shrink: 1; flex-direction: row; white-space: normal;" />
+        </ui:VisualElement>
+        <ui:Button text="Create Socket" display-tooltip-when-elided="true" name="create-socket-button" />
     </ui:VisualElement>
     <ui:Foldout text="Default Inspector" name="default-inspector" />
 </ui:UXML>

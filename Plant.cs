@@ -291,7 +291,7 @@ namespace games.noio.planter
                 throw new Exception("Plants with more than 32 types of branches are not supported.");
             }
 
-            template.Preprocess();
+            template.FindSockets();
 
             var branchType = new BranchType(template);
 
@@ -299,9 +299,9 @@ namespace games.noio.planter
 
             foreach (var socket in template.Sockets)
             {
-                foreach (var branchOption in socket.BranchOptions)
+                foreach (var branchOption in socket.BranchOptions2)
                 {
-                    PreprocessBranchType(branchOption);
+                    PreprocessBranchType(branchOption.Template);
                 }
             }
         }
@@ -390,7 +390,7 @@ namespace games.noio.planter
             _growableBranchTypes.Clear();
             foreach (var bt in _branchTypes)
             {
-                if (bt.Growable && openSocket.BranchOptions.Contains(bt.Template))
+                if (bt.Growable && openSocket.IsBranchOption(bt.Template))
                 {
                     _growableBranchTypes.Add(bt);
                 }

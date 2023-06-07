@@ -38,8 +38,9 @@ namespace games.noio.planter
                 if (Children[i] == null)
                 {
                     var socket = Template.Sockets[i];
-                    foreach (var childBranchTemplate in socket.BranchOptions)
+                    foreach (var option in socket.BranchOptions2)
                     {
+                        var childBranchTemplate = option.Template;
                         if (depthOfChildren >= childBranchTemplate.DepthMin &&
                             depthOfChildren <= childBranchTemplate.DepthMax)
                         {

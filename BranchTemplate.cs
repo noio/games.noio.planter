@@ -1,15 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Assertions;
+using Random = UnityEngine.Random;
 
 // using Sirenix.OdinInspector;
 // using Sirenix.Utilities.Editor;
 
 namespace games.noio.planter
 {
-    [ExecuteAlways]
     public class BranchTemplate : MonoBehaviour
     {
         #region PUBLIC AND SERIALIZED FIELDS
@@ -26,7 +28,7 @@ namespace games.noio.planter
 
         [Tooltip("How much of the plant can be made up of this type of branch")]
         [SerializeField]
-        [Range(0,100)]
+        [Range(0, 100)]
         float _quotaPercent = 100;
 
         [Tooltip("How many other branches (of any type) should the plant have, before " +
@@ -39,27 +41,39 @@ namespace games.noio.planter
         LayerMask _obstacleLayers = 1;
 
         [Tooltip("If any layer set: the branch will only grow if it can stick to surfaces on these layers")]
-        [SerializeField] LayerMask _surfaceLayers = 1;
+        [SerializeField]
+        LayerMask _surfaceLayers = 1;
+
         [Tooltip("Maximum distance between the branch and the surface defined above")]
-        [SerializeField] float _surfaceDistance = 1;
-        
+        [SerializeField]
+        float _surfaceDistance = 1;
+
         [Tooltip("Branches are randomly rotated (relative to their socket rotation). By how much?")]
-        [Range(0, 180)] [SerializeField] float _maxPivotAngle = 30;
+        [Range(0, 180)]
+        [SerializeField]
+        float _maxPivotAngle = 30;
+
         [Tooltip("Branches are randomly rolled (around the Z-axis). By how much?")]
-        [Range(0, 180)] [SerializeField] float _maxRollAngle = 30;
+        [Range(0, 180)]
+        [SerializeField]
+        float _maxRollAngle = 30;
+
         [Tooltip("After random rotation, should the branches be tilted towards the sky?")]
-        [Range(-1, 1)] [SerializeField] float _growUpwards;
+        [Range(-1, 1)]
+        [SerializeField]
+        float _growUpwards;
+
         [Tooltip("After selecting a random direction for the branch, roll it (around the Z axis) to make " +
                  "its up-vector face upwards.")]
-        [SerializeField] bool _faceUpwards;
-        
+        [SerializeField]
+        bool _faceUpwards;
+
         [SerializeField] Mesh[] _meshVariants;
 
         #endregion
 
         Renderer _renderer;
         CapsuleCollider _capsuleCollider;
-        bool _preprocessed;
 
         #region PROPERTIES
 
@@ -147,8 +161,6 @@ namespace games.noio.planter
 
         public Branch CreateBranch()
         {
-            Assert.IsTrue(_preprocessed, $"{name} has not been Preprocessed");
-
             _renderer = _renderer ? _renderer : GetComponent<Renderer>();
 
             var created = new GameObject { name = name, layer = gameObject.layer };
@@ -173,20 +185,8 @@ namespace games.noio.planter
             return branch;
         }
 
-        public void Preprocess(bool force = false)
+        public void FindSockets()
         {
-            /*
-             * Only Prefabs should be preprocessed.
-             */
-            Assert.IsTrue(gameObject.scene == default, "BranchTemplate should not be instantiated.");
-
-            if (_preprocessed && !force)
-            {
-                return;
-            }
-
-            _preprocessed = true;
-
             Sockets = new List<BranchSocket>();
             foreach (Transform child in transform)
             {
@@ -200,94 +200,32 @@ namespace games.noio.planter
         #region EDITOR
 
 #if UNITY_EDITOR
-
-        static float MaxQuotaPercentage(float value, GUIContent label)
-        {
-            using (new GUILayout.HorizontalScope())
-            {
-                var newValue = EditorGUILayout.Slider(label, value * 100, 0, 100) / 100;
-                GUILayout.Label("%", GUILayout.Width(16));
-                return newValue;
-            }
-        }
-
-        public bool ValidateCapsuleCollider => Capsule.direction == 2 &&
-                                               Mathf.Abs(Capsule.height - Capsule.center.z * 2) < 0.0001f &&
-                                               ((Vector2)Capsule.center).sqrMagnitude < 0.0001f;
-
-        public void SetSocketsVisible(bool visible)
-        {
-            foreach (Transform child in transform)
-            {
-                child.gameObject.SetActive(visible);
-            }
-        }
-
-        // [OnInspectorGUI]
-        // void BeforeSocketsGUI()
-        // {
-        //     if (AnySocketVisible())
-        //     {
-        //         EditorGUILayout.HelpBox("Hide sockets before applying prefab", MessageType.Warning);
-        //     }
-        // }
-
-        // [PropertyOrder(-1)]
-        // [TitleGroup("Branching", "Which branches will grow out of this branch, and where")]
-
-        // [HorizontalGroup("Branching/Sockets")]
-        // [EnableIf(nameof(HasSockets))]
-        // [Button(ButtonSizes.Large, Name = "@" + nameof(ToggleSocketsButtonName))]
-        // [GUIColor(nameof(ToggleSocketsColor))]
-        void ToggleSockets()
-        {
-            var visi = AnySocketVisible() == false;
-            SetSocketsVisible(visi);
-            _preprocessed = false;
-        }
-
-        string ToggleSocketsButtonName =>
-            AnySocketVisible() ? "Hide Sockets before Applying Prefab" : "Show Sockets";
-
-        Color ToggleSocketsColor => AnySocketVisible() ? new Color(1f, 0.65f, 0.53f) : Color.white;
-
-        // [HorizontalGroup("Branching/Sockets")]
-        // [OnInspectorGUI]
-        void DrawBranchInfo()
-        {
-            if (Selection.gameObjects.Length == 1)
-            {
-                foreach (Transform child in transform)
-                {
-                    if (child.TryGetComponent(out BranchSocket socket))
-                    {
-                        using (new EditorGUILayout.HorizontalScope())
-                        {
-                            if (socket.BranchOptions != null && socket.BranchOptions.Count > 0)
-                            {
-                                GUILayout.Label(socket.name, GUILayout.Width(80));
-                                var branches = string.Join(", ", socket.BranchOptions.Select(o => o.name));
-
-                                // GUILayout.Label(branches, SirenixGUIStyles.BoldLabel);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        
 
         // [HorizontalGroup("Branching/Sockets", Width = 100)]
         // [VerticalGroup("Branching/Sockets/Buttons")]
         // [Button(ButtonSizes.Large, Name = "Add Socket")]
-        void CreateSocket()
+        public void CreateSocket()
         {
-            SetSocketsVisible(true);
-            var go = new GameObject("Socket");
+            var stage = PrefabStageUtility.GetCurrentPrefabStage();
+            if (stage == null)
+            {
+                throw new Exception("Can only add branch with Prefab open.");
+            }
+
+            var go = new GameObject($"Socket [{Sockets.Count}]");
             go.transform.SetParent(transform, false);
             go.transform.localPosition = Vector3.forward;
             var socket = go.AddComponent<BranchSocket>();
+            Sockets.Add(socket);
 
-            // socket.BranchOptions = new List<BranchTemplate> { this };
+            var path = stage.assetPath;
+            var templatePrefab = AssetDatabase.LoadAssetAtPath<BranchTemplate>(path);
+
+            Debug.Log($"Template Prefab: {templatePrefab} {AssetDatabase.GetAssetPath(templatePrefab)}");
+            Assert.IsNotNull(templatePrefab);
+
+            socket.AddBranchOption(templatePrefab);
             socket.OnBranchOptionsChanged();
         }
 
@@ -299,7 +237,7 @@ namespace games.noio.planter
             Undo.RecordObject(gameObject, "Refresh Sockets");
             foreach (var socket in GetComponentsInChildren<BranchSocket>(true))
             {
-                socket.RefreshSocketPreviewMesh();
+                socket.AddPreviewMesh();
             }
         }
 
