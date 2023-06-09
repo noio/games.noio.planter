@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &754593496187910964
 Transform:
   m_ObjectHideFlags: 0
@@ -47,8 +47,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _branchOptions:
-  - {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf, type: 3}
-  _branchOptions2: []
+  - _template: {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf,
+      type: 3}
+    _probabilityPercent: 100
 --- !u!33 &6381315013707639823
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -117,7 +118,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &4708033415031992305
 Transform:
   m_ObjectHideFlags: 0
@@ -146,8 +147,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _branchOptions:
-  - {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf, type: 3}
-  _branchOptions2: []
+  - _template: {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf,
+      type: 3}
+    _probabilityPercent: 100
 --- !u!33 &1972961704024253325
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -216,7 +218,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &7883073394917208749
 Transform:
   m_ObjectHideFlags: 0
@@ -245,8 +247,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _branchOptions:
-  - {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf, type: 3}
-  _branchOptions2: []
+  - _template: {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf,
+      type: 3}
+    _probabilityPercent: 100
 --- !u!33 &489502346896269220
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -456,7 +459,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &8987653134357549871
 Transform:
   m_ObjectHideFlags: 0
@@ -485,8 +488,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _branchOptions:
-  - {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf, type: 3}
-  _branchOptions2: []
+  - _template: {fileID: 6838132298060743433, guid: 58e153004b2e74cfcaf1634bd96339cf,
+      type: 3}
+    _probabilityPercent: 100
 --- !u!33 &9065118753797781063
 MeshFilter:
   m_ObjectHideFlags: 0

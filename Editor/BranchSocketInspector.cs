@@ -1,6 +1,5 @@
-using System.Linq;
+using System.Collections.Generic;
 using UnityEditor;
-using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -13,81 +12,55 @@ namespace games.noio.planter.Editor
 
         [SerializeField] VisualTreeAsset _visualTree;
         [SerializeField] VisualTreeAsset _branchOptionElement;
-        VisualElement _branchOptions;
-        BranchSocket _branchSocket;
 
         #endregion
+
+        VisualElement _branchOptions;
+        BranchSocket _branchSocket;
+        ListView _optionList;
 
         public override VisualElement CreateInspectorGUI()
         {
             _branchSocket = target as BranchSocket;
             var tree = _visualTree.CloneTree();
 
-            var addButton = tree.Q<Button>("add-button");
-            addButton.clicked += AddBranchOption;
+            _optionList = tree.Q<ListView>("options-list");
+            _optionList.itemsAdded += HandleOptionsChanged;
+            _optionList.itemsRemoved += HandleOptionsChanged;
 
-            _branchOptions = tree.Q<VisualElement>("branch-options");
-            RefreshBranchOptions();
+            // EditorApplication.delayCall += BindOptionProbabilityListeners;
 
             return tree;
         }
 
-        void RefreshBranchOptions()
+        // void BindOptionProbabilityListeners()
+        // {
+        //     var optionListViewport = _optionList.Q<VisualElement>("unity-content-container");
+        //     for (var i = 0; i < optionListViewport.childCount; i++)
+        //     {
+        //         var child = optionListViewport[i];
+        //         var floatField = child.Q<FloatField>();
+        //
+        //         var fixedOptionIndex = i;
+        //         floatField.RegisterCallback<BlurEvent>(evt =>
+        //         {
+        //             _branchSocket.NormalizeProbabilities(fixedOptionIndex);
+        //         });
+        //
+        //         // floatField.RegisterValueChangedCallback(
+        //
+        //         Debug.Log($"FloatField:{floatField}");
+        //     }
+        // }
+
+
+        void HandleOptionsChanged(IEnumerable<int> i)
         {
-            var branchOptionsProp = serializedObject.FindProperty("_branchOptions2");
-            _branchOptions.Clear();
-            for (int i = 0; i < branchOptionsProp.arraySize; i++)
+            EditorApplication.delayCall += () =>
             {
-                var optionProp = branchOptionsProp.GetArrayElementAtIndex(i);
-                var element = _branchOptionElement.CloneTree();
-                element.BindProperty(optionProp);
-                _branchOptions.Add(element);
-            }
-        }
-
-        void AddBranchOption()
-        {
-            // var namePrefix = ParentTemplate != null ? ParentTemplate.name.Split(' ', '-', '_')[0] : "NONE";
-
-            var allBranches = AssetDatabase.FindAssets("t:GameObject")
-                                           .Select(AssetDatabase.GUIDToAssetPath)
-                                           .Select(AssetDatabase.LoadAssetAtPath<BranchTemplate>)
-                                           .Where(bt => bt != null)
-                                           .Where(bt => _branchSocket.IsBranchOption(bt) == false)
-                                           .OrderBy(bt => bt.name)
-                                           .ToList();
-
-            // var branchesOfSamePlant = allBranches
-            // .Where(d => d.name.StartsWith(namePrefix))
-            // .Where(d => BranchOptions.Contains(d) == false)
-            // .ToList();
-
-            var menu = new GenericMenu();
-
-            // foreach (var branch in branchesOfSamePlant)
-            // {
-            // menu.AddItem(new GUIContent(branch.name), false, () =>
-            // {
-            // Undo.RecordObject(this, "Add Branch Option");
-            // _branchOptions.Insert(0, branch);
-            // });
-            // }
-
-            foreach (var branch in allBranches)
-            {
-                menu.AddItem(new GUIContent(branch.name), false, () =>
-                {
-                    Undo.RecordObject(this, "Add Branch Option");
-                    _branchSocket.AddBranchOption(branch, 100f / (_branchSocket.BranchOptions2.Count + 1));
-                    RefreshBranchOptions();
-                    EditorUtility.SetDirty(_branchSocket);
-                    serializedObject.Update();
-
-                    // _branchOptions.Insert(0, branch);
-                });
-            }
-
-            menu.ShowAsContext();
+                _branchSocket.OnBranchOptionChanged();
+                serializedObject.Update();
+            };
         }
     }
 }

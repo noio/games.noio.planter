@@ -129,8 +129,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c738616f284f4eb9899593d0ce40fed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  RootTransform: {fileID: 6275207992212580164}
-  Definition: {fileID: 11400000, guid: b597ad116939841bb8cd4d5a25975cda, type: 2}
+  _resetWhenMoved: 0
+  _rootTransform: {fileID: 0}
+  _species: {fileID: 11400000, guid: b597ad116939841bb8cd4d5a25975cda, type: 2}
+  _state: 0
+  _grownAtLocation: {x: 0, y: 0, z: 0}
+  _grownAtRotation: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &7494059448553111779
 GameObject:
   m_ObjectHideFlags: 0

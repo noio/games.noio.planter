@@ -299,7 +299,7 @@ namespace games.noio.planter
 
             foreach (var socket in template.Sockets)
             {
-                foreach (var branchOption in socket.BranchOptions2)
+                foreach (var branchOption in socket.BranchOptions)
                 {
                     PreprocessBranchType(branchOption.Template);
                 }

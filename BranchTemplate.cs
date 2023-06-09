@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -200,7 +199,6 @@ namespace games.noio.planter
         #region EDITOR
 
 #if UNITY_EDITOR
-        
 
         // [HorizontalGroup("Branching/Sockets", Width = 100)]
         // [VerticalGroup("Branching/Sockets/Buttons")]
@@ -226,7 +224,7 @@ namespace games.noio.planter
             Assert.IsNotNull(templatePrefab);
 
             socket.AddBranchOption(templatePrefab);
-            socket.OnBranchOptionsChanged();
+            socket.OnBranchOptionChanged();
         }
 
         // [ShowIf(nameof(AnySocketVisible))]

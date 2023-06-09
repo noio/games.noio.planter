@@ -12,15 +12,16 @@ namespace games.noio.planter.Editor
         #region PUBLIC AND SERIALIZED FIELDS
 
         [SerializeField] VisualTreeAsset _visualTree;
-        BranchTemplate _template;
-        Button _addSocketButton;
 
         #endregion
+
+        BranchTemplate _template;
+        Button _addSocketButton;
+        VisualElement _prefabStageWarning;
 
         public override VisualElement CreateInspectorGUI()
         {
             _template = target as BranchTemplate;
-            
 
             var tree = _visualTree.CloneTree();
 
@@ -33,12 +34,14 @@ namespace games.noio.planter.Editor
             // var maxPivotAngle = tree.Q<Slider>("max-pivot-angle");
             // var maxPivotAngleDisplay = tree.Q<CircleFillElement>("max-pivot-angle-display");
             // maxPivotAngle.RegisterValueChangedCallback(evt => maxPivotAngleDisplay.Arc = evt.newValue);
-            
+
             _template.FindSockets();
             _addSocketButton = tree.Q<Button>("create-socket-button");
-            CheckCreateSocketButtonEnabled();
             _addSocketButton.clicked += HandleCreateSocketButtonClicked;
+
+            _prefabStageWarning = tree.Q<VisualElement>("prefab-stage-warning");
             
+            CheckCreateSocketButtonEnabled();
 
             var defaultInspector = tree.Q<Foldout>("default-inspector");
             InspectorElement.FillDefaultInspector(defaultInspector, serializedObject, this);
@@ -48,14 +51,15 @@ namespace games.noio.planter.Editor
         void CheckCreateSocketButtonEnabled()
         {
             var currentPrefabStage = PrefabStageUtility.GetCurrentPrefabStage();
-            var isOpenInPrefabmode = (currentPrefabStage != null &&
-                                      currentPrefabStage.prefabContentsRoot == _template.gameObject);
-                
-            
+            var isOpenInPrefabmode = currentPrefabStage != null &&
+                                     currentPrefabStage.prefabContentsRoot == _template.gameObject;
+
+            _prefabStageWarning.style.display =
+                new StyleEnum<DisplayStyle>(isOpenInPrefabmode ? DisplayStyle.None : DisplayStyle.Flex);
+
             var canCreate = _template.Sockets.Count < 4;
-            
-            
-            _addSocketButton.SetEnabled(canCreate);
+
+            _addSocketButton.SetEnabled(canCreate && isOpenInPrefabmode);
         }
 
         void HandleCreateSocketButtonClicked()

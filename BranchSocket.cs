@@ -1,9 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Serialization;
 
 // using Sirenix.OdinInspector;
 
@@ -14,157 +15,194 @@ namespace games.noio.planter
     {
         #region PUBLIC AND SERIALIZED FIELDS
 
-        [SerializeField] List<BranchTemplate> _branchOptions;
-        [SerializeField] List<BranchOption> _branchOptions2;
+        [FormerlySerializedAs("_branchOptions2")]
+        [SerializeField]
+        List<BranchSocketOption> _branchOptions;
 
         #endregion
-
-        BranchTemplate _parentTemplate;
 
         #region PROPERTIES
 
-        BranchTemplate ParentTemplate => _parentTemplate
-            ? _parentTemplate
-            : _parentTemplate = GetComponentInParent<BranchTemplate>();
-
-        // public IReadOnlyList<BranchTemplate> BranchOptions => _branchOptions;
-        public IReadOnlyList<BranchOption> BranchOptions2 => _branchOptions2;
+        public IReadOnlyList<BranchSocketOption> BranchOptions => _branchOptions;
 
         #endregion
 
-        [Serializable]
-        public class BranchOption
+        public bool IsBranchOption(BranchTemplate template)
         {
-            #region PUBLIC AND SERIALIZED FIELDS
-
-            [SerializeField] BranchTemplate _template;
-            [SerializeField] float _probabilityPercent;
-
-            #endregion
-
-            #region PROPERTIES
-
-            public BranchTemplate Template
-            {
-                get => _template;
-                set => _template = value;
-            }
-
-            public float ProbabilityPercent
-            {
-                get => _probabilityPercent;
-                set => _probabilityPercent = value;
-            }
-
-            #endregion
+            return _branchOptions.Any(o => o.Template == template);
         }
 
 #if UNITY_EDITOR
 
-        public void OnBranchOptionsChanged()
+        public void OnBranchOptionChanged()
         {
+            InitializeEmptyBranchOptions();
+            NormalizeProbabilities();
             AddPreviewMesh();
+        }
+
+        public void OnBranchOptionRemoved(int removeIndex)
+        {
         }
 
         public void AddPreviewMesh()
         {
-            if (_branchOptions2?.Count > 0)
+            if (_branchOptions == null)
             {
-                Undo.RecordObject(gameObject, "Change Socket Mesh");
+                return;
+            }
 
-                if (TryGetComponent<MeshFilter>(out var meshFilter) == false)
+            foreach (var option in _branchOptions)
+            {
+                if (option != null && option.Template != null)
                 {
-                    meshFilter = gameObject.AddComponent<MeshFilter>();
+                    Undo.RecordObject(gameObject, "Change Socket Mesh");
+
+                    if (TryGetComponent<MeshFilter>(out var meshFilter) == false)
+                    {
+                        meshFilter = gameObject.AddComponent<MeshFilter>();
+                    }
+
+                    if (TryGetComponent<MeshRenderer>(out var meshRenderer) == false)
+                    {
+                        meshRenderer = gameObject.AddComponent<MeshRenderer>();
+                    }
+
+                    meshFilter.sharedMesh = option.Template.GetMeshVariant(0);
+                    meshRenderer.sharedMaterials =
+                        option.Template.GetComponent<MeshRenderer>().sharedMaterials;
+                    if (meshFilter.sharedMesh != null)
+                    {
+                        /*
+                         * We successfully set a mesh, so we're done.
+                         */
+                        EditorUtility.SetDirty(gameObject);
+                        return;
+                    }
                 }
-
-                if (TryGetComponent<MeshRenderer>(out var meshRenderer) == false)
-                {
-                    meshRenderer = gameObject.AddComponent<MeshRenderer>();
-                }
-
-                var firstOption = _branchOptions2[0].Template;
-
-                meshFilter.sharedMesh = firstOption.GetMeshVariant(0);
-                meshRenderer.sharedMaterials = firstOption.GetComponent<MeshRenderer>().sharedMaterials;
             }
         }
 
-        void AddBranchOption2()
+        void InitializeEmptyBranchOptions()
         {
-            var namePrefix = ParentTemplate != null ? ParentTemplate.name.Split(' ', '-', '_')[0] : "NONE";
-
-            var allBranches = AssetDatabase.FindAssets("t:GameObject")
-                                           .Select(AssetDatabase.GUIDToAssetPath)
-                                           .Select(AssetDatabase.LoadAssetAtPath<BranchTemplate>)
-                                           .Where(bt => bt != null)
-                                           .Where(d => BranchOptions2.Any(bo => bo.Template == d) == false)
-                                           .ToList();
-            
-            var branchesOfSamePlant = allBranches
-                                      .Where(d => d.name.StartsWith(namePrefix))
-                                      .ToList();
-
-            var menu = new GenericMenu();
-            foreach (var branch in branchesOfSamePlant)
+            foreach (var option in _branchOptions)
             {
-                menu.AddItem(new GUIContent(branch.name), false, () =>
+                if (option.Template != null)
                 {
-                    Undo.RecordObject(this, "Add Branch Option");
-                    _branchOptions.Insert(0, branch);
-                });
-            }
+                    continue;
+                }
 
-            foreach (var branch in allBranches)
-            {
-                menu.AddItem(new GUIContent("Other/" + branch.name), false, () =>
+                var templateInstance = GetComponentInParent<BranchTemplate>();
+                var stage = PrefabStageUtility.GetCurrentPrefabStage();
+                string templateAssetPath;
+                if (stage != null && stage.prefabContentsRoot.transform == transform.root)
                 {
-                    Undo.RecordObject(this, "Add Branch Option");
-                    _branchOptions.Insert(0, branch);
-                });
-            }
+                    templateAssetPath = stage.assetPath;
+                }
+                else
+                {
+                    templateAssetPath =
+                        PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot(templateInstance);
+                }
 
-            menu.ShowAsContext();
+                if (string.IsNullOrEmpty(templateAssetPath))
+                {
+                    Debug.LogError($"Could not find Prefab Asset for {name}");
+                }
+
+                var templateAsset = AssetDatabase.LoadAssetAtPath<BranchTemplate>(templateAssetPath);
+
+                // Debug.Log($"Path: {templateAssetPath} Asset: {templateAsset}");
+                option.Template = templateAsset;
+                option.ProbabilityPercent = 100;
+            }
         }
 
         public void AddBranchOption(BranchTemplate branch, float probabilityPercent = 100)
         {
             Assert.IsTrue(branch.gameObject.scene == default, "Need prefab object ref of a BranchTemplate");
 
-            if (_branchOptions2 == null)
+            if (_branchOptions == null)
             {
-                _branchOptions2 = new List<BranchOption>();
+                _branchOptions = new List<BranchSocketOption>();
             }
 
-            _branchOptions2.Add(new BranchOption
+            _branchOptions.Add(new BranchSocketOption
             {
                 Template = branch,
                 ProbabilityPercent = probabilityPercent
             });
 
             NormalizeProbabilities();
+            AddPreviewMesh();
 
             EditorUtility.SetDirty(this);
         }
 
         void NormalizeProbabilities()
         {
-            var factor = _branchOptions2.Sum(bo => bo.ProbabilityPercent) / 100f;
-            foreach (var bo in _branchOptions2)
+            switch (_branchOptions.Count)
+            {
+                case 0:
+                    return;
+                case 1:
+                    _branchOptions[0].ProbabilityPercent = 100;
+                    return;
+            }
+
+            var factor = _branchOptions.Sum(bo => bo.ProbabilityPercent) / 100f;
+            foreach (var bso in _branchOptions)
             {
                 if (factor > 0)
                 {
-                    bo.ProbabilityPercent /= factor;
+                    bso.ProbabilityPercent /= factor;
                 }
                 else
                 {
-                    bo.ProbabilityPercent = 100f / _branchOptions2.Count;
+                    bso.ProbabilityPercent = 100f / _branchOptions.Count;
+                }
+            }
+        }
+
+        public void NormalizeProbabilities(int keepFixed)
+        {
+            switch (_branchOptions.Count)
+            {
+                case 0:
+                    return;
+                case 1:
+                    _branchOptions[0].ProbabilityPercent = 100;
+                    return;
+            }
+
+            /*
+             * Sum of other probabilities
+             */
+            var fixedOption = _branchOptions[keepFixed];
+            fixedOption.ProbabilityPercent = Mathf.Clamp(fixedOption.ProbabilityPercent, 0, 100);
+            var otherSum = _branchOptions.Where(option => option != fixedOption)
+                                         .Sum(option => option.ProbabilityPercent);
+
+            var remainingProbability = (100f - fixedOption.ProbabilityPercent); 
+            var factor = otherSum / remainingProbability;
+
+            foreach (var option in _branchOptions)
+            {
+                if (option == fixedOption)
+                {
+                    continue;
+                }
+
+                if (factor > 0)
+                {
+                    option.ProbabilityPercent /= factor;
+                }
+                else
+                {
+                    option.ProbabilityPercent = remainingProbability / _branchOptions.Count;
                 }
             }
         }
 #endif
-        public bool IsBranchOption(BranchTemplate template)
-        {
-            return _branchOptions2.Any(o => o.Template == template);
-        }
     }
 }

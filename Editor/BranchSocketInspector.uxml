@@ -1,14 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <ui:Template name="BranchOptionElement" src="project://database/Assets/Packages/games.noio.planter/Editor/BranchOptionElement.uxml?fileID=9197481963319205126&amp;guid=ab0519dfb0b874d94afabc5a6e16f090&amp;type=3#BranchOptionElement" />
     <Style src="project://database/Assets/Packages/games.noio.planter/Editor/SectionBox.uss?fileID=7433441132597879392&amp;guid=11fbe3c0348a1435881d7d26ef42bd78&amp;type=3#SectionBox" />
     <ui:VisualElement name="shape" class="section-box">
         <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-self: stretch; justify-content: space-between; margin-left: 2px; margin-right: 0; margin-top: 4px; margin-bottom: 4px;">
             <ui:Label tabindex="-1" text="Options" display-tooltip-when-elided="true" class="header" />
             <ui:Label tabindex="-1" text="Which branches grow from this socket?" display-tooltip-when-elided="true" class="description" />
         </ui:VisualElement>
-        <ui:VisualElement name="branch-options" style="flex-grow: 0; background-color: rgba(0, 0, 0, 0);">
-            <ui:Instance template="BranchOptionElement" name="BranchOptionElement" />
-        </ui:VisualElement>
-        <ui:Button text="Add" display-tooltip-when-elided="true" name="add-button" />
+        <ui:ListView focusable="true" binding-path="_branchOptions" show-bound-collection-size="false" show-add-remove-footer="true" show-border="true" reorderable="true" virtualization-method="DynamicHeight" name="options-list" />
     </ui:VisualElement>
+    <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0);" />
 </ui:UXML>
