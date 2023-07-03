@@ -39,11 +39,8 @@ namespace games.noio.planter.Editor
 
             var tree = _visualTree.CloneTree();
 
-            var resetButton = tree.Q<Button>("reset-button");
-            resetButton.clicked += () => plant.Reset();
-
-            var growButton = tree.Q<Button>("grow-button");
-            growButton.clicked += () => plant.ForceStartGrow();
+            var restartButton = tree.Q<Button>("restart-button");
+            restartButton.clicked += () => plant.Restart();
 
             var speciesInspector = tree.Q<VisualElement>("species-inspector");
             var speciesProp = serializedObject.FindProperty("_species");

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4802260665251460202}
   - component: {fileID: 8239301373551706918}
   - component: {fileID: 7753522944635180202}
-  m_Layer: 30
+  m_Layer: 0
   m_Name: Sample Branch Fruit
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -50,7 +50,7 @@ MonoBehaviour:
   _depthMin: 0
   _depthMax: 12
   _maxCount: 500
-  _quotaPercent: 27.7
+  _quotaPercent: 13
   _minTotalOtherBranches: 0
   _obstacleLayers:
     serializedVersion: 2

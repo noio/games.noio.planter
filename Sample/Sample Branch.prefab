@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4802260665251460202}
   - component: {fileID: 8239301373551706918}
   - component: {fileID: 7753522944635180202}
-  m_Layer: 30
+  m_Layer: 0
   m_Name: Sample Branch
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -152,7 +152,7 @@ GameObject:
   - component: {fileID: 4714986086473452793}
   - component: {fileID: 9065118753797781063}
   - component: {fileID: 610166655370917284}
-  m_Layer: 30
+  m_Layer: 0
   m_Name: Socket [0]
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -354,7 +354,7 @@ GameObject:
   - component: {fileID: 3479143321279588062}
   - component: {fileID: 2544994730202722263}
   - component: {fileID: 6048658195386304034}
-  m_Layer: 30
+  m_Layer: 0
   m_Name: Socket [1]
   m_TagString: Untagged
   m_Icon: {fileID: 0}

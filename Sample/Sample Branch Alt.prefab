@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4802260665251460202}
   - component: {fileID: 8239301373551706918}
   - component: {fileID: 7753522944635180202}
-  m_Layer: 30
+  m_Layer: 0
   m_Name: Sample Branch Alt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -51,7 +51,7 @@ MonoBehaviour:
   _depthMin: 0
   _depthMax: 12
   _maxCount: 500
-  _quotaPercent: 44.7
+  _quotaPercent: 39
   _minTotalOtherBranches: 0
   _obstacleLayers:
     serializedVersion: 2
@@ -150,7 +150,7 @@ GameObject:
   - component: {fileID: 4714986086473452793}
   - component: {fileID: 9065118753797781063}
   - component: {fileID: 610166655370917284}
-  m_Layer: 30
+  m_Layer: 0
   m_Name: Socket
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -165,7 +165,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4479216533768331361}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.015, y: 0, z: 0.819}
+  m_LocalPosition: {x: -0.021, y: -0.011, z: 0.819}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

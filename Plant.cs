@@ -10,21 +10,25 @@ namespace games.noio.planter
     [ExecuteAlways]
     public class Plant : MonoBehaviour
     {
-        
         const int MaxFailedGrowAttempts = 5000;
         const int GrowAttemptsPerFrame = 200;
         const int BranchesPerFrame = 10;
-        static readonly Collider[] ColliderCache = new Collider[2];
+        static readonly Collider[] ColliderCache = new Collider[4];
 
         #region PUBLIC AND SERIALIZED FIELDS
 
         [Tooltip("Restart simulation when the GameObject is moved")]
-        [SerializeField] bool _resetWhenMoved;
+        [SerializeField]
+        bool _restartWhenMoved;
+
         [SerializeField] Transform _rootTransform;
         [SerializeField] PlantSpecies _species;
         [SerializeField] PlantState _state;
         [SerializeField] Vector3 _grownAtLocation;
         [SerializeField] Quaternion _grownAtRotation;
+        [SerializeField] int _growSucceeded;
+        [SerializeField] int _growFailed;
+        [SerializeField] float _difficulty;
 
         #endregion
 
@@ -36,7 +40,11 @@ namespace games.noio.planter
 
         #region PROPERTIES
 
-        public int FailedGrowAttempts { get; private set; }
+        /// <summary>
+        ///     Number of failed grow attempts since the last successful grow attempt
+        ///     (the last time a branch was added)
+        /// </summary>
+        public int FailedAttemptsSinceBranchAdded { get; private set; }
 
         #endregion
 
@@ -44,14 +52,14 @@ namespace games.noio.planter
 
         void Update()
         {
-            if (_resetWhenMoved &&
+            if (_restartWhenMoved &&
                 (Vector3.Distance(transform.position, _grownAtLocation) > .01f ||
                  Quaternion.Angle(transform.rotation, _grownAtRotation) > 1))
             {
-                Reset();
+                ResetPlant();
                 _state = PlantState.Growing;
             }
-            
+
             switch (_state)
             {
                 case PlantState.Growing:
@@ -61,7 +69,7 @@ namespace games.noio.planter
 
                     PrepareForGrowing();
 
-                    for (int i = 0; i < BranchesPerFrame; i++)
+                    for (var i = 0; i < BranchesPerFrame; i++)
                     {
                         Grow();
                     }
@@ -84,55 +92,14 @@ namespace games.noio.planter
 
         #endregion
 
-        public void ForceStartGrow()
+        public void Restart()
         {
+            ResetPlant();
             EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
             _state = PlantState.Growing;
-            FailedGrowAttempts = 0;
         }
 
-        public void PrepareForGrowing()
-        {
-            CheckSetup();
-
-            if (IsCacheValid() == false)
-            {
-                /*
-                 * Try to reconstruct cache from Game Object Hierarchy
-                 */
-                TryReconstructCacheFromHierarchy();
-            }
-
-            /*
-             * Reconstructing from gameobject hierarchy didn't work
-             * (or the GO is just empty)
-             */
-            if (IsCacheValid() == false)
-            {
-                Reset(); // also clears cache
-            }
-
-            _state = PlantState.Growing;
-        }
-
-        static Quaternion RotateAroundZ(float zRad)
-        {
-            // float rollOver2 = 0;
-            var halfAngle = zRad * 0.5f;
-            var sinAngle = Mathf.Sin(halfAngle);
-            var cosAngle = Mathf.Cos(halfAngle);
-
-            // float yawOver2 = 0;
-
-            return new Quaternion(
-                0,
-                0,
-                sinAngle,
-                cosAngle
-            );
-        }
-
-        public void Reset()
+        void ResetPlant()
         {
             CheckSetup();
 
@@ -167,10 +134,56 @@ namespace games.noio.planter
             _branchesWithOpenSockets.Enqueue(_branches[0]);
             UpdateGrowableBranchTypes();
 
+            FailedAttemptsSinceBranchAdded = 0;
+            _growSucceeded = 0;
+            _growFailed = 0;
+            _difficulty = 0;
+
             /*
              * Block to prevent plant from growing immediately
              */
             _state = PlantState.Blocked;
+        }
+
+        void PrepareForGrowing()
+        {
+            CheckSetup();
+
+            if (IsCacheValid() == false)
+            {
+                /*
+                 * Try to reconstruct cache from Game Object Hierarchy
+                 */
+                TryReconstructCacheFromHierarchy();
+            }
+
+            /*
+             * Reconstructing from gameobject hierarchy didn't work
+             * (or the GO is just empty)
+             */
+            if (IsCacheValid() == false)
+            {
+                ResetPlant(); // also clears cache
+            }
+
+            _state = PlantState.Growing;
+        }
+
+        static Quaternion RotateAroundZ(float zRad)
+        {
+            // float rollOver2 = 0;
+            var halfAngle = zRad * 0.5f;
+            var sinAngle = Mathf.Sin(halfAngle);
+            var cosAngle = Mathf.Cos(halfAngle);
+
+            // float yawOver2 = 0;
+
+            return new Quaternion(
+                0,
+                0,
+                sinAngle,
+                cosAngle
+            );
         }
 
         bool TryReconstructCacheFromHierarchy()
@@ -231,7 +244,7 @@ namespace games.noio.planter
         /// <returns>Whether the plant is settled</returns>
         bool SnapToGround(int steps = 10, float lerpAmount = .2f)
         {
-            for (int i = 0; i < steps; i++)
+            for (var i = 0; i < steps; i++)
             {
                 var rayOrigin = transform.TransformPoint(new Vector3(0, 2, 0));
                 var dir = new Vector3(Random.Range(-.5f, .5f), -1, Random.Range(-.5f, .5f));
@@ -340,7 +353,7 @@ namespace games.noio.planter
                 }
             }
 
-            if (FailedGrowAttempts > MaxFailedGrowAttempts)
+            if (FailedAttemptsSinceBranchAdded > MaxFailedGrowAttempts)
             {
                 _state = PlantState.Blocked;
             }
@@ -407,7 +420,7 @@ namespace games.noio.planter
             if (_growableBranchTypes.Count == 0)
             {
                 _nextSocketIndex++;
-                FailedGrowAttempts++;
+                GrowFailed();
                 return null;
             }
 
@@ -479,13 +492,31 @@ namespace games.noio.planter
 
                 UpdateGrowableBranchTypes();
 
-                FailedGrowAttempts = 0;
+                GrowSuccess();
                 return branch;
             }
 
             _nextSocketIndex++;
-            FailedGrowAttempts++;
+            GrowFailed();
             return null;
+        }
+
+        void GrowSuccess()
+        {
+            FailedAttemptsSinceBranchAdded = 0;
+            _growSucceeded++;
+            var f = Mathf.Log10(MaxFailedGrowAttempts);
+            _difficulty =
+                Mathf.Clamp01(-Mathf.Log10((float)_growSucceeded / (_growSucceeded + _growFailed)) / f);
+        }
+
+        void GrowFailed()
+        {
+            FailedAttemptsSinceBranchAdded++;
+            _growFailed++;
+            var f = Mathf.Log10(MaxFailedGrowAttempts);
+            _difficulty =
+                Mathf.Clamp01(-Mathf.Log10((float)_growSucceeded / (_growSucceeded + _growFailed)) / f);
         }
 
         void UpdateGrowableBranchTypes()
@@ -514,7 +545,7 @@ namespace games.noio.planter
             }
         }
 
-        static bool CheckPlacement(
+        bool CheckPlacement(
             Vector3 globalPos, Quaternion globalRot, BranchTemplate template, GameObject ignoredParent = null)
         {
             if (CheckIfAreaClear(globalPos, globalRot, template, ignoredParent) == false)
@@ -567,27 +598,44 @@ namespace games.noio.planter
             return true;
         }
 
-        static bool CheckIfTouchesSurface(Vector3 globalPos, Quaternion globalRot, BranchTemplate template)
-        {
-            return GetTouchingSurface(globalPos, globalRot, template) != null;
-        }
-
-        static Collider GetTouchingSurface(Vector3 globalPos, Quaternion globalRot, BranchTemplate template)
+        bool CheckIfTouchesSurface(Vector3 globalPos, Quaternion globalRot, BranchTemplate template)
         {
             var radius = template.Capsule.radius;
             var height = template.Capsule.height;
             var dir = globalRot * Vector3.forward;
 
-            // ReSharper disable once Unity.InefficientMultiplicationOrder
             var offset = globalRot * Vector3.down * radius;
             var start = globalPos + offset + dir * (0.5f * height);
             var end = globalPos + offset + dir * (height - radius);
 
             radius *= template.SurfaceDistance;
 
-            var count = Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.SurfaceLayers);
+            var count =
+                Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.SurfaceLayers);
+            for (int i = 0; i < count; i++)
+            {
+                /*
+                 * Among the found colliders, we need to check whether they belong to the current plant
+                 * in order to avoid plants from using themselves as a surface. Although it would be more
+                 * efficient to create a dedicated layer called 'Plants' for all plants and exclude it
+                 * from the SurfaceLayers, I don't want to impose a specific layer setup on users of
+                 * this package. I want to avoid setting layers on the sample plants that could
+                 * potentially clash with existing layers in a project.
+                 */
+                var cldr = ColliderCache[i];
+                if (cldr.TryGetComponent(out Branch branch))
+                {
+                    var owner = branch.GetComponentInParent<Plant>();
+                    if (owner == this)
+                    {
+                        continue;
+                    }
+                }
 
-            return count > 0 ? ColliderCache[0] : null;
+                return true;
+            }
+
+            return false;
         }
 
         void GetSocketPositionAndRotation(
