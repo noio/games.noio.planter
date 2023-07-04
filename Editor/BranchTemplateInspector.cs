@@ -40,7 +40,7 @@ namespace games.noio.planter.Editor
             _addSocketButton.clicked += HandleCreateSocketButtonClicked;
 
             _prefabStageWarning = tree.Q<VisualElement>("prefab-stage-warning");
-            
+
             CheckCreateSocketButtonEnabled();
 
             var defaultInspector = tree.Q<Foldout>("default-inspector");
@@ -57,15 +57,17 @@ namespace games.noio.planter.Editor
             _prefabStageWarning.style.display =
                 new StyleEnum<DisplayStyle>(isOpenInPrefabmode ? DisplayStyle.None : DisplayStyle.Flex);
 
-            var canCreate = _template.Sockets.Count < 4;
+            var canCreate = _template.Sockets.Count < BranchTemplate.MaxSockets;
 
             _addSocketButton.SetEnabled(canCreate && isOpenInPrefabmode);
+            _addSocketButton.text = $"Create Socket ({_template.Sockets.Count}/{BranchTemplate.MaxSockets})";
         }
 
         void HandleCreateSocketButtonClicked()
         {
-            _template.CreateSocket();
-            _addSocketButton.SetEnabled(_template.Sockets.Count < 4);
+            var createdSocket = _template.CreateSocket();
+            Selection.activeGameObject = createdSocket.gameObject;
+            CheckCreateSocketButtonEnabled();
         }
     }
 }

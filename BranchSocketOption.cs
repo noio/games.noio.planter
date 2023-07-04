@@ -8,7 +8,7 @@ namespace games.noio.planter
     {
         #region PUBLIC AND SERIALIZED FIELDS
 
-        [SerializeField] BranchTemplate _template;
+        [SerializeField] [AssetPicker] BranchTemplate _template;
         [SerializeField] float _probabilityPercent;
 
         #endregion

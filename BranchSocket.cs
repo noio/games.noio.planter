@@ -15,9 +15,7 @@ namespace games.noio.planter
     {
         #region PUBLIC AND SERIALIZED FIELDS
 
-        [FormerlySerializedAs("_branchOptions2")]
-        [SerializeField]
-        List<BranchSocketOption> _branchOptions;
+        [SerializeField] List<BranchSocketOption> _branchOptions;
 
         #endregion
 
@@ -183,7 +181,7 @@ namespace games.noio.planter
             var otherSum = _branchOptions.Where(option => option != fixedOption)
                                          .Sum(option => option.ProbabilityPercent);
 
-            var remainingProbability = (100f - fixedOption.ProbabilityPercent); 
+            var remainingProbability = (100f - fixedOption.ProbabilityPercent);
             var factor = otherSum / remainingProbability;
 
             foreach (var option in _branchOptions)

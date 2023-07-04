@@ -18,10 +18,9 @@ namespace games.noio.planter.Editor
             var tree = visualTreeAsset.CloneTree();
             tree.BindProperty(property);
 
-            var templateProperty = property.FindPropertyRelative("_template");
-
-            var selectButton = tree.Q<Button>("select-button");
-            selectButton.clicked += () => SelectTemplate(templateProperty);
+            // var templateProperty = property.FindPropertyRelative("_template");
+            // var selectButton = tree.Q<Button>("select-button");
+            // selectButton.clicked += () => SelectTemplate(templateProperty);
             return tree;
         }
 

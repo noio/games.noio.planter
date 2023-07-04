@@ -2,11 +2,7 @@
     <Style src="project://database/Assets/Packages/games.noio.planter/Editor/BranchSocketOptionDrawer.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchSocketOptionDrawer" />
     <ui:VisualElement style="flex-grow: 0; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-items: stretch; justify-content: flex-start; align-self: stretch;">
         <ui:FloatField value="50" name="probability-field" binding-path="_probabilityPercent" style="flex-direction: row; flex-grow: 0; width: 43px; align-items: stretch; justify-content: flex-start; align-self: flex-start; -unity-text-align: upper-left; margin-left: 5px;" />
-        <ui:Label tabindex="-1" text="%" display-tooltip-when-elided="true" style="-unity-text-align: middle-center; margin-left: 5px;" />
-        <uie:ObjectField type="games.noio.planter.BranchTemplate, games.noio.planter" name="branch-socket-field" binding-path="_template" style="flex-grow: 1; flex-shrink: 1; margin-right: 0;" />
-        <ui:Button display-tooltip-when-elided="true" name="select-button" style="margin-left: 10px; flex-direction: row;">
-            <ui:Label tabindex="-1" text="Select" display-tooltip-when-elided="true" />
-            <ui:Label tabindex="-1" text="▼" display-tooltip-when-elided="true" style="font-size: 8px;" />
-        </ui:Button>
+        <ui:Label tabindex="-1" text="%" display-tooltip-when-elided="true" name="percent-label" style="-unity-text-align: middle-center; margin-left: 5px;" />
+        <uie:PropertyField binding-path="_template" name="branch-option-field" class="no-label" style="flex-grow: 1;" />
     </ui:VisualElement>
 </ui:UXML>

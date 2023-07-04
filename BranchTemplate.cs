@@ -11,8 +11,11 @@ using Random = UnityEngine.Random;
 
 namespace games.noio.planter
 {
+    [RequireComponent(typeof(CapsuleCollider))]
     public class BranchTemplate : MonoBehaviour
     {
+        public const int MaxSockets = 4;
+
         #region PUBLIC AND SERIALIZED FIELDS
 
         [Tooltip("Where in the plant is this branch allowed to occur?")]
@@ -72,7 +75,7 @@ namespace games.noio.planter
         #endregion
 
         Renderer _renderer;
-        CapsuleCollider _capsuleCollider;
+        CapsuleCollider _capsule;
 
         #region PROPERTIES
 
@@ -115,12 +118,12 @@ namespace games.noio.planter
         {
             get
             {
-                if (_capsuleCollider == null)
+                if (_capsule == null)
                 {
-                    _capsuleCollider = GetComponent<CapsuleCollider>();
+                    _capsule = GetComponent<CapsuleCollider>();
                 }
 
-                return _capsuleCollider;
+                return _capsule;
             }
         }
 
@@ -200,10 +203,7 @@ namespace games.noio.planter
 
 #if UNITY_EDITOR
 
-        // [HorizontalGroup("Branching/Sockets", Width = 100)]
-        // [VerticalGroup("Branching/Sockets/Buttons")]
-        // [Button(ButtonSizes.Large, Name = "Add Socket")]
-        public void CreateSocket()
+        public BranchSocket CreateSocket()
         {
             var stage = PrefabStageUtility.GetCurrentPrefabStage();
             if (stage == null)
@@ -211,9 +211,31 @@ namespace games.noio.planter
                 throw new Exception("Can only add branch with Prefab open.");
             }
 
+            Assert.IsTrue(Sockets.Count < MaxSockets);
+
             var go = new GameObject($"Socket [{Sockets.Count}]");
             go.transform.SetParent(transform, false);
-            go.transform.localPosition = Vector3.forward;
+            var l = Capsule.height;
+            
+            switch (Sockets.Count)
+            {
+                case 0:
+                    go.transform.localPosition = Vector3.forward;
+                    break;
+                case 1:
+                    go.transform.localPosition = Vector3.forward;
+                    go.transform.localEulerAngles = new Vector3(0, 45);
+                    break;
+                case 2:
+                    go.transform.localPosition = Vector3.forward;
+                    go.transform.localEulerAngles = new Vector3(0, -45);
+                    break;
+                default:
+                    go.transform.localPosition = new Vector3(0, 0, 0.5f);
+                    go.transform.localEulerAngles = new Vector3(-45, 0);
+                    break;
+            }
+
             var socket = go.AddComponent<BranchSocket>();
             Sockets.Add(socket);
 
@@ -225,11 +247,9 @@ namespace games.noio.planter
 
             socket.AddBranchOption(templatePrefab);
             socket.OnBranchOptionChanged();
+            return socket;
         }
 
-        // [ShowIf(nameof(AnySocketVisible))]
-        // [VerticalGroup("Branching/Sockets/Buttons")]
-        // [Button(Name = "Refresh")]
         void RefreshSocketsPreviewMesh()
         {
             Undo.RecordObject(gameObject, "Refresh Sockets");
@@ -257,10 +277,6 @@ namespace games.noio.planter
             return false;
         }
 
-        // [TitleGroup("Actions")]
-        // [GUIColor(1, .56f, .49f)]
-        // [HideIf(nameof(ValidateCapsuleCollider))]
-        // [Button]
         void FixCapsuleColliderPosition()
         {
             if (Capsule != null)
