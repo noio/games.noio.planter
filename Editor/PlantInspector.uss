@@ -1,5 +1,5 @@
 .unity-progress-bar__progress {
-    background-color: rgba(135, 166, 84, 0.98);
+    background-color: rgba(188, 134, 107, 0.98);
 }
 
 #definition-field > Label {
@@ -7,4 +7,17 @@
 
 #unity-input-m_Script {
     display: none;
+}
+
+.status-bar {
+    margin-left: -4px;
+    margin-right: -8px;
+    margin-top: 0;
+    height: 24px;
+    padding-top: 5px;
+    padding-left: 6px;
+    padding-bottom: 3px;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
+    -unity-font-style: bold;
 }

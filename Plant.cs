@@ -10,6 +10,8 @@ namespace games.noio.planter
     [ExecuteAlways]
     public class Plant : MonoBehaviour
     {
+        public event Action BranchAdded;
+        
         const int MaxFailedGrowAttempts = 5000;
         const int GrowAttemptsPerFrame = 200;
         const int BranchesPerFrame = 10;
@@ -35,7 +37,7 @@ namespace games.noio.planter
         List<Branch> _branches;
         Queue<Branch> _branchesWithOpenSockets;
         List<BranchType> _branchTypes;
-        List<BranchType> _growableBranchTypes;
+        List<(BranchType branchType, float weight)> _growableBranchTypes;
         int _nextSocketIndex;
 
         #region PROPERTIES
@@ -46,6 +48,8 @@ namespace games.noio.planter
         /// </summary>
         public int FailedAttemptsSinceBranchAdded { get; private set; }
 
+        public IReadOnlyList<BranchType> BranchTypes => _branchTypes;
+
         #endregion
 
         #region MONOBEHAVIOUR METHODS
@@ -53,6 +57,7 @@ namespace games.noio.planter
         void Update()
         {
             if (_restartWhenMoved &&
+                _state != PlantState.MissingData &&
                 (Vector3.Distance(transform.position, _grownAtLocation) > .01f ||
                  Quaternion.Angle(transform.rotation, _grownAtRotation) > 1))
             {
@@ -81,12 +86,13 @@ namespace games.noio.planter
 
                     break;
                 }
-                case PlantState.Blocked:
+                case PlantState.Done:
                     break;
-                case PlantState.FullyGrown:
+                case PlantState.MissingData:
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    _state = PlantState.Done;
+                    break;
             }
         }
 
@@ -130,7 +136,7 @@ namespace games.noio.planter
             ClearCache();
             CreateRootTransform();
             PreprocessBranchType(_species.RootBranch);
-            AddBranch(null, 0, _branchTypes[0], Vector3.zero, Quaternion.identity);
+            AddBranch(null, 0, BranchTypes[0], Vector3.zero, Quaternion.identity);
             _branchesWithOpenSockets.Enqueue(_branches[0]);
             UpdateGrowableBranchTypes();
 
@@ -142,7 +148,7 @@ namespace games.noio.planter
             /*
              * Block to prevent plant from growing immediately
              */
-            _state = PlantState.Blocked;
+            _state = PlantState.Done;
         }
 
         void PrepareForGrowing()
@@ -194,7 +200,7 @@ namespace games.noio.planter
 
             foreach (var branch in GetComponentsInChildren<Branch>())
             {
-                var branchType = _branchTypes.FirstOrDefault(bt => bt.Template == branch.Template);
+                var branchType = BranchTypes.FirstOrDefault(bt => bt.Template == branch.Template);
                 if (branchType == null)
                 {
                     /*
@@ -230,7 +236,7 @@ namespace games.noio.planter
             _branchesWithOpenSockets ??= new Queue<Branch>();
 
             _growableBranchTypes?.Clear();
-            _growableBranchTypes ??= new List<BranchType>();
+            _growableBranchTypes ??= new List<(BranchType branchType, float weight)>();
         }
 
         bool IsCacheValid()
@@ -289,7 +295,7 @@ namespace games.noio.planter
             /*
              * Skip templates that we already added
              */
-            if (_branchTypes.Any(bt => bt.Template == template))
+            if (BranchTypes.Any(bt => bt.Template == template))
             {
                 return;
             }
@@ -337,10 +343,7 @@ namespace games.noio.planter
         /// <summary>
         ///     Try for a number of attempts to find a node to grow
         /// </summary>
-        /// <param name="attempts"></param>
-        /// <param name="branch"></param>
         /// <returns></returns>
-        /// <exception cref="Exception"></exception>
         bool Grow()
         {
             var attempts = GrowAttemptsPerFrame;
@@ -355,7 +358,7 @@ namespace games.noio.planter
 
             if (FailedAttemptsSinceBranchAdded > MaxFailedGrowAttempts)
             {
-                _state = PlantState.Blocked;
+                _state = PlantState.Done;
             }
 
             return false;
@@ -363,10 +366,15 @@ namespace games.noio.planter
 
         Branch FindBranchToGrow()
         {
+            if (_branches.Count >= _species.MaxTotalBranches)
+            {
+                _state = PlantState.Done;
+                return null;
+            }
+            
             if (_branchesWithOpenSockets.Count == 0)
             {
-                Debug.Log("No open sockets. Plant is done");
-                _state = PlantState.FullyGrown;
+                _state = PlantState.Done;
                 return null;
             }
 
@@ -401,11 +409,11 @@ namespace games.noio.planter
             }
 
             _growableBranchTypes.Clear();
-            foreach (var bt in _branchTypes)
+            foreach (var bt in BranchTypes)
             {
-                if (bt.Growable && openSocket.IsBranchOption(bt.Template))
+                if (bt.Growable && openSocket.IsBranchOption(bt.Template, out float weight))
                 {
-                    _growableBranchTypes.Add(bt);
+                    _growableBranchTypes.Add((bt, weight));
                 }
             }
 
@@ -425,9 +433,13 @@ namespace games.noio.planter
             }
 
             // var address = attemptGrowAtSocket.Address;
-            var branchType = _growableBranchTypes[Random.Range(0, _growableBranchTypes.Count)];
+            // var totalWeight = _growableBranchTypes.Sum(bt => bt.;);
+            // _growableBranchTypes;
+            var pair = PickWeighted(_growableBranchTypes, tuple => tuple.weight);
+            var branchType = pair.branchType;
             var template = branchType.Template;
-
+            
+            
             // var parent = _branches[GetParentAddress(address)];
             GetSocketPositionAndRotation(parent, _nextSocketIndex,
                 out var socketLocalPos, out var socketLocalRot);
@@ -493,12 +505,46 @@ namespace games.noio.planter
                 UpdateGrowableBranchTypes();
 
                 GrowSuccess();
+                BranchAdded?.Invoke();
                 return branch;
             }
 
             _nextSocketIndex++;
             GrowFailed();
             return null;
+        }
+        
+        /// <summary>
+        ///     Pick a random item from the list, with
+        ///     each item having a specified weight
+        /// </summary>
+        /// <param name="sequence"></param>
+        /// <param name="weightSelector"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        public static T PickWeighted<T>(IList<T> sequence, Func<T, float> weightSelector)
+        {
+            var totalWeight = sequence.Sum(weightSelector);
+            if (totalWeight <= 0)
+            {
+                return sequence[0];
+            }
+
+            // The weight we are after...
+            var itemWeightIndex = Random.value * totalWeight;
+            float currentWeightIndex = 0;
+            foreach (var item in sequence)
+            {
+                currentWeightIndex += weightSelector(item);
+
+                // If we've hit or passed the weight we are after for this item then it's the one we want....
+                if (currentWeightIndex >= itemWeightIndex)
+                {
+                    return item;
+                }
+            }
+
+            return default;
         }
 
         void GrowSuccess()
@@ -522,7 +568,7 @@ namespace games.noio.planter
         void UpdateGrowableBranchTypes()
         {
             var anyGrowable = false;
-            foreach (var branchType in _branchTypes)
+            foreach (var branchType in BranchTypes)
             {
                 var template = branchType.Template;
                 if (_branches.Count >= template.MinTotalOtherBranches &&
@@ -541,7 +587,7 @@ namespace games.noio.planter
             if (anyGrowable == false)
             {
                 Debug.Log("No branch types available. Plant is done");
-                _state = PlantState.FullyGrown;
+                _state = PlantState.Done;
             }
         }
 
@@ -667,13 +713,16 @@ namespace games.noio.planter
         {
             if (_species == null)
             {
-                throw new Exception($"Create and set a {nameof(PlantSpecies)} on Plant \"{name}\"");
+                _state = PlantState.MissingData;
+                Debug.LogError($"Create and set a {nameof(PlantSpecies)} on Plant \"{name}\"");
+                return;
             }
 
             if (_species.RootBranch == null)
             {
-                throw new Exception(
-                    $"Create and set a RootNode ({nameof(BranchTemplate)}) on Species \"{_species}\"");
+                _state = PlantState.MissingData;
+                Debug.LogError(
+                    $"Create and set a Root Branch ({nameof(BranchTemplate)}) on Species \"{_species}\"");
             }
         }
 
@@ -721,7 +770,7 @@ namespace games.noio.planter
             return branch;
         }
 
-        class BranchType
+        public class BranchType
         {
             #region PUBLIC AND SERIALIZED FIELDS
 
@@ -744,9 +793,9 @@ namespace games.noio.planter
     }
 }
 
-internal enum PlantState
+public enum PlantState
 {
-    Blocked,
+    MissingData,
     Growing,
-    FullyGrown
+    Done
 }

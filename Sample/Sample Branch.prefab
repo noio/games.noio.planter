@@ -52,8 +52,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _depthMin: 0
   _depthMax: 12
-  _maxCount: 500
-  _quotaPercent: 100
+  _maxCount: 300
+  _quotaPercent: 92.3
   _minTotalOtherBranches: 0
   _obstacleLayers:
     serializedVersion: 2
@@ -188,10 +188,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _branchOptions:
   - _template: {fileID: 6838132298060743433}
-    _probabilityPercent: 50
+    _probabilityPercent: 80
   - _template: {fileID: 6838132298060743433, guid: 167c42ea842f04d56856079f58cb8ed7,
       type: 3}
-    _probabilityPercent: 50
+    _probabilityPercent: 20
 --- !u!33 &9065118753797781063
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -299,7 +299,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5211608017904644521}
-  m_Mesh: {fileID: 8923733792915768573, guid: becec246d79654499b2d253a23af3b3c, type: 3}
+  m_Mesh: {fileID: 6457317559769452473, guid: becec246d79654499b2d253a23af3b3c, type: 3}
 --- !u!23 &3106461303060189905
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -390,10 +390,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _branchOptions:
   - _template: {fileID: 6838132298060743433}
-    _probabilityPercent: 50
+    _probabilityPercent: 80
   - _template: {fileID: 6838132298060743433, guid: 167c42ea842f04d56856079f58cb8ed7,
       type: 3}
-    _probabilityPercent: 50
+    _probabilityPercent: 20
 --- !u!33 &2544994730202722263
 MeshFilter:
   m_ObjectHideFlags: 0

@@ -353,7 +353,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _depthMin: 0
   _depthMax: 12
-  _maxCount: 500
+  _maxCount: 1
   _quotaPercent: 100
   _minTotalOtherBranches: 0
   _obstacleLayers:

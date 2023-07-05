@@ -1,0 +1,9 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/BranchSocketOptionDrawer.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchSocketOptionDrawer" />
+    <ui:VisualElement style="flex-grow: 0; background-color: rgba(0, 0, 0, 0); flex-direction: column; align-self: flex-start; margin-top: 8px;">
+        <ui:Label tabindex="-1" text="Branch Template" display-tooltip-when-elided="true" name="name-label" style="-unity-text-align: middle-left; margin-left: 5px; height: 18px; -unity-font-style: bold;" />
+        <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0); margin-left: 20px;">
+            <ui:Label tabindex="-1" text="Count: 1 / 20" display-tooltip-when-elided="true" name="count-label" style="-unity-text-align: middle-left; margin-left: 5px; height: 18px; -unity-font-style: normal;" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

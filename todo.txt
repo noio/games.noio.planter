@@ -1,4 +1,9 @@
 - [x] get rid of branch uint ids
-- [ ] BranchTemplate UI (add Branch button, set options per branch, etc)
+- [x] BranchTemplate UI (add Branch button, set options per branch, etc)
 - [x] Remove custom layer dependency, make sure that plants don't use self as surface by default
-- [ ] input field next to sliders is broken (For Quota %)
+- [x] input field next to sliders is broken (For Quota %)
+- [x] make the branch option probabilities work
+- [x] respect plant max total branches
+- [x] "onboarding": add plant component, create species with button, create branch with button
+- [ ] fix capsule collider position button
+- [x] plant status display

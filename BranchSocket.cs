@@ -25,9 +25,19 @@ namespace games.noio.planter
 
         #endregion
 
-        public bool IsBranchOption(BranchTemplate template)
+        public bool IsBranchOption(BranchTemplate template, out float weight)
         {
-            return _branchOptions.Any(o => o.Template == template);
+            var option = _branchOptions.FirstOrDefault(o => o.Template == template);
+            if (option != null)
+            {
+                weight = option.ProbabilityPercent;
+                return true;
+            }
+            else
+            {
+                weight = 0;
+                return false;
+            }
         }
 
 #if UNITY_EDITOR

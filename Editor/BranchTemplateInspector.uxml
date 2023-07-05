@@ -41,5 +41,4 @@
         </ui:VisualElement>
         <ui:Button text="Create Socket" display-tooltip-when-elided="true" name="create-socket-button" />
     </ui:VisualElement>
-    <ui:Foldout text="Default Inspector" name="default-inspector" />
 </ui:UXML>

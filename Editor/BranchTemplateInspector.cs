@@ -6,7 +6,8 @@ using UnityEngine.UIElements;
 
 namespace games.noio.planter.Editor
 {
-    [CustomEditor(typeof(BranchTemplate))]
+    [CustomEditor(typeof(BranchTemplate))]    
+    [CanEditMultipleObjects]
     public class BranchTemplateInspector : UnityEditor.Editor
     {
         #region PUBLIC AND SERIALIZED FIELDS
@@ -16,7 +17,7 @@ namespace games.noio.planter.Editor
         #endregion
 
         BranchTemplate _template;
-        Button _addSocketButton;
+        Button _createSocketButton;
         VisualElement _prefabStageWarning;
 
         public override VisualElement CreateInspectorGUI()
@@ -36,15 +37,15 @@ namespace games.noio.planter.Editor
             // maxPivotAngle.RegisterValueChangedCallback(evt => maxPivotAngleDisplay.Arc = evt.newValue);
 
             _template.FindSockets();
-            _addSocketButton = tree.Q<Button>("create-socket-button");
-            _addSocketButton.clicked += HandleCreateSocketButtonClicked;
+            _createSocketButton = tree.Q<Button>("create-socket-button");
+            _createSocketButton.clicked += HandleCreateSocketButtonClicked;
 
             _prefabStageWarning = tree.Q<VisualElement>("prefab-stage-warning");
 
             CheckCreateSocketButtonEnabled();
 
-            var defaultInspector = tree.Q<Foldout>("default-inspector");
-            InspectorElement.FillDefaultInspector(defaultInspector, serializedObject, this);
+            // var defaultInspector = tree.Q<Foldout>("default-inspector");
+            // InspectorElement.FillDefaultInspector(defaultInspector, serializedObject, this);
             return tree;
         }
 
@@ -59,8 +60,8 @@ namespace games.noio.planter.Editor
 
             var canCreate = _template.Sockets.Count < BranchTemplate.MaxSockets;
 
-            _addSocketButton.SetEnabled(canCreate && isOpenInPrefabmode);
-            _addSocketButton.text = $"Create Socket ({_template.Sockets.Count}/{BranchTemplate.MaxSockets})";
+            _createSocketButton.SetEnabled(canCreate && isOpenInPrefabmode);
+            _createSocketButton.text = $"Create Socket ({_template.Sockets.Count}/{BranchTemplate.MaxSockets})";
         }
 
         void HandleCreateSocketButtonClicked()

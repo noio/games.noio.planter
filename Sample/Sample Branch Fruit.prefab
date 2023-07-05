@@ -49,8 +49,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _depthMin: 0
   _depthMax: 12
-  _maxCount: 500
-  _quotaPercent: 13
+  _maxCount: 100
+  _quotaPercent: 10
   _minTotalOtherBranches: 0
   _obstacleLayers:
     serializedVersion: 2

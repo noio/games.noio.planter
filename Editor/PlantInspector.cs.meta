@@ -6,6 +6,8 @@ MonoImporter:
   defaultReferences:
   - _visualTree: {fileID: 9197481963319205126, guid: ebba2754686754d9582b1a2acd27ce1f,
       type: 3}
+  - _branchStatusVisualTree: {fileID: 9197481963319205126, guid: 706601de3e9744c05a6b80b1695023b2,
+      type: 3}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 
