@@ -1,5 +1,5 @@
 {
-    "name": "games.noio.planter.Combiner.Editor",
+    "name": "games.noio.utils.Editor",
     "rootNamespace": "",
     "references": [
         "GUID:c861bcb78a3784e2db9c26f787f34f2e"
