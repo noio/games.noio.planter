@@ -1,21 +1,28 @@
 {
-    "name": "games.noio.planter",
-    "version": "0.1.1",
-    "displayName": "Planter",
-    "description": "The plant growing simulation from Cloud Gardens as an Editor package",
-    "unity": "2022.2",
-    "unityRelease": "0b5",
-    "dependencies": {},
-    "keywords": [
-        "Build"
-    ],
-    "author": {
-        "name": "Thomas van den Berg",
-        "email": "thomas@noio.nl",
-        "url": "https://noio.games"
-    },
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/noio/games.noio.planter.git"
+  "name": "games.noio.planter",
+  "version": "0.2.0",
+  "displayName": "Planter",
+  "description": "The plant growing simulation from Cloud Gardens as an Editor package",
+  "unity": "2022.2",
+  "unityRelease": "0b5",
+  "dependencies": {},
+  "keywords": [
+    "Build"
+  ],
+  "author": {
+    "name": "Thomas van den Berg",
+    "email": "thomas@noio.nl",
+    "url": "https://noio.games"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/noio/games.noio.planter.git"
+  },
+  "samples": [
+    {
+      "displayName": "Sample Plant Setup",
+      "description": "Example setup for a single plant with some 3d models from Cloud Gardens",
+      "path": "Samples~/Sample Plant Setup"
     }
+  ]
 }

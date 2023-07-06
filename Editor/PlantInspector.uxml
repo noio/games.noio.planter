@@ -12,11 +12,16 @@
     </ui:VisualElement>
     <ui:VisualElement class="section-box" style="flex-grow: 1;">
         <ui:VisualElement class="header-line" style="background-color: rgba(0, 0, 0, 0); flex-grow: 0; flex-direction: column; margin-top: 0;">
-            <ui:Label tabindex="-1" text="Done" display-tooltip-when-elided="true" name="done-label" class="status-bar" style="background-color: rgba(142, 142, 142, 0.55); display: flex;" />
-            <ui:Label tabindex="-1" text="Growing" display-tooltip-when-elided="true" name="growing-label" class="status-bar" style="background-color: rgba(113, 221, 108, 0.55); display: none;" />
-            <ui:Label tabindex="-1" text="Missing Data" display-tooltip-when-elided="true" name="missing-data-label" class="status-bar" style="background-color: rgba(221, 85, 85, 0.55); display: none;" />
+            <ui:Label tabindex="-1" text="Status: Done" display-tooltip-when-elided="true" name="done-label" class="status-bar" style="background-color: rgba(142, 142, 142, 0.55); display: flex;" />
+            <ui:Label tabindex="-1" text="Status: Growing" display-tooltip-when-elided="true" name="growing-label" class="status-bar" style="background-color: rgba(113, 221, 108, 0.55); display: none;" />
+            <ui:Label tabindex="-1" text="Status: Missing Data" display-tooltip-when-elided="true" name="missing-data-label" class="status-bar" style="background-color: rgba(221, 85, 85, 0.55); display: none;" />
         </ui:VisualElement>
         <ui:ProgressBar value="0.8" title="Difficulty" binding-path="_difficulty" high-value="1" class="difficult-bar" />
         <ui:VisualElement name="branch-status" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0);" />
+    </ui:VisualElement>
+    <ui:VisualElement class="section-box" style="flex-grow: 1; display: none;">
+        <ui:Label tabindex="-1" text="Events" display-tooltip-when-elided="true" class="header" />
+        <uie:PropertyField binding-path="_growStarted" />
+        <uie:PropertyField binding-path="_growComplete" />
     </ui:VisualElement>
 </ui:UXML>

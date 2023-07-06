@@ -1,0 +1,5 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/PlantInspector.uss?fileID=7433441132597879392&amp;guid=6dd4e1487fc7f4ccb9504cbb41ebd2ba&amp;type=3#PlantInspector" />
+    <ui:EnumField label="After Merge" binding-path="_afterMerge" />
+    <ui:Button text="Merge Children" display-tooltip-when-elided="true" name="merge-button" />
+</ui:UXML>

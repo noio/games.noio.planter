@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 using Random = UnityEngine.Random;
 
 namespace games.noio.planter
@@ -11,7 +12,6 @@ namespace games.noio.planter
     public class Plant : MonoBehaviour
     {
         public event Action BranchAdded;
-        
         const int MaxFailedGrowAttempts = 5000;
         const int GrowAttemptsPerFrame = 200;
         const int BranchesPerFrame = 10;
@@ -31,6 +31,8 @@ namespace games.noio.planter
         [SerializeField] int _growSucceeded;
         [SerializeField] int _growFailed;
         [SerializeField] float _difficulty;
+        [SerializeField] UnityEvent _growStarted;
+        [SerializeField] UnityEvent _growComplete;
 
         #endregion
 
@@ -62,16 +64,16 @@ namespace games.noio.planter
                  Quaternion.Angle(transform.rotation, _grownAtRotation) > 1))
             {
                 ResetPlant();
+                Undo.RecordObject(this, "Start Growing");
                 _state = PlantState.Growing;
+                _grownAtLocation = transform.position;
+                _grownAtRotation = transform.rotation;
             }
 
             switch (_state)
             {
                 case PlantState.Growing:
                 {
-                    _grownAtLocation = transform.position;
-                    _grownAtRotation = transform.rotation;
-
                     PrepareForGrowing();
 
                     for (var i = 0; i < BranchesPerFrame; i++)
@@ -103,6 +105,39 @@ namespace games.noio.planter
             ResetPlant();
             EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
             _state = PlantState.Growing;
+        }
+
+        /// <summary>
+        ///     Pick a random item from the list, with
+        ///     each item having a specified weight
+        /// </summary>
+        /// <param name="sequence"></param>
+        /// <param name="weightSelector"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
+        static T PickWeighted<T>(IList<T> sequence, Func<T, float> weightSelector)
+        {
+            var totalWeight = sequence.Sum(weightSelector);
+            if (totalWeight <= 0)
+            {
+                return sequence[0];
+            }
+
+            // The weight we are after...
+            var itemWeightIndex = Random.value * totalWeight;
+            float currentWeightIndex = 0;
+            foreach (var item in sequence)
+            {
+                currentWeightIndex += weightSelector(item);
+
+                // If we've hit or passed the weight we are after for this item then it's the one we want....
+                if (currentWeightIndex >= itemWeightIndex)
+                {
+                    return item;
+                }
+            }
+
+            return default;
         }
 
         void ResetPlant()
@@ -358,7 +393,7 @@ namespace games.noio.planter
 
             if (FailedAttemptsSinceBranchAdded > MaxFailedGrowAttempts)
             {
-                _state = PlantState.Done;
+                OnGrowComplete();
             }
 
             return false;
@@ -368,13 +403,13 @@ namespace games.noio.planter
         {
             if (_branches.Count >= _species.MaxTotalBranches)
             {
-                _state = PlantState.Done;
+                OnGrowComplete();
                 return null;
             }
-            
+
             if (_branchesWithOpenSockets.Count == 0)
             {
-                _state = PlantState.Done;
+                OnGrowComplete();
                 return null;
             }
 
@@ -411,7 +446,7 @@ namespace games.noio.planter
             _growableBranchTypes.Clear();
             foreach (var bt in BranchTypes)
             {
-                if (bt.Growable && openSocket.IsBranchOption(bt.Template, out float weight))
+                if (bt.Growable && openSocket.IsBranchOption(bt.Template, out var weight))
                 {
                     _growableBranchTypes.Add((bt, weight));
                 }
@@ -428,7 +463,7 @@ namespace games.noio.planter
             if (_growableBranchTypes.Count == 0)
             {
                 _nextSocketIndex++;
-                GrowFailed();
+                OnGrowFailed();
                 return null;
             }
 
@@ -438,8 +473,7 @@ namespace games.noio.planter
             var pair = PickWeighted(_growableBranchTypes, tuple => tuple.weight);
             var branchType = pair.branchType;
             var template = branchType.Template;
-            
-            
+
             // var parent = _branches[GetParentAddress(address)];
             GetSocketPositionAndRotation(parent, _nextSocketIndex,
                 out var socketLocalPos, out var socketLocalRot);
@@ -504,50 +538,24 @@ namespace games.noio.planter
 
                 UpdateGrowableBranchTypes();
 
-                GrowSuccess();
+                OnGrowSuccess();
                 BranchAdded?.Invoke();
                 return branch;
             }
 
             _nextSocketIndex++;
-            GrowFailed();
+            OnGrowFailed();
             return null;
         }
-        
-        /// <summary>
-        ///     Pick a random item from the list, with
-        ///     each item having a specified weight
-        /// </summary>
-        /// <param name="sequence"></param>
-        /// <param name="weightSelector"></param>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        public static T PickWeighted<T>(IList<T> sequence, Func<T, float> weightSelector)
+
+        void OnGrowComplete()
         {
-            var totalWeight = sequence.Sum(weightSelector);
-            if (totalWeight <= 0)
-            {
-                return sequence[0];
-            }
-
-            // The weight we are after...
-            var itemWeightIndex = Random.value * totalWeight;
-            float currentWeightIndex = 0;
-            foreach (var item in sequence)
-            {
-                currentWeightIndex += weightSelector(item);
-
-                // If we've hit or passed the weight we are after for this item then it's the one we want....
-                if (currentWeightIndex >= itemWeightIndex)
-                {
-                    return item;
-                }
-            }
-
-            return default;
+            Undo.RecordObject(this, "Complete Growth");
+            _state = PlantState.Done;
+            _growComplete?.Invoke();
         }
 
-        void GrowSuccess()
+        void OnGrowSuccess()
         {
             FailedAttemptsSinceBranchAdded = 0;
             _growSucceeded++;
@@ -556,7 +564,7 @@ namespace games.noio.planter
                 Mathf.Clamp01(-Mathf.Log10((float)_growSucceeded / (_growSucceeded + _growFailed)) / f);
         }
 
-        void GrowFailed()
+        void OnGrowFailed()
         {
             FailedAttemptsSinceBranchAdded++;
             _growFailed++;
@@ -586,8 +594,7 @@ namespace games.noio.planter
 
             if (anyGrowable == false)
             {
-                Debug.Log("No branch types available. Plant is done");
-                _state = PlantState.Done;
+                OnGrowComplete();
             }
         }
 
@@ -658,7 +665,7 @@ namespace games.noio.planter
 
             var count =
                 Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.SurfaceLayers);
-            for (int i = 0; i < count; i++)
+            for (var i = 0; i < count; i++)
             {
                 /*
                  * Among the found colliders, we need to check whether they belong to the current plant
@@ -764,6 +771,7 @@ namespace games.noio.planter
 
             branch.name = $"D{branch.Depth} {branchType.Template.name}";
             branch.Template = branchType.Template;
+            Undo.RegisterCreatedObjectUndo(branch.gameObject, $"Added branch for {name}");
 
             _branches.Add(branch);
             branchType.TotalCount++;
