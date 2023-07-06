@@ -55,7 +55,7 @@ MonoBehaviour:
   _minTotalOtherBranches: 0
   _obstacleLayers:
     serializedVersion: 2
-    m_Bits: 1073741825
+    m_Bits: 1
   _surfaceLayers:
     serializedVersion: 2
     m_Bits: 1
@@ -72,7 +72,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3692159035441225240}
-  m_Mesh: {fileID: -339535064059512947, guid: 8dc9658bd3dc747b7a33ddfbd476be8b, type: 3}
+  m_Mesh: {fileID: -339535064059512947, guid: becec246d79654499b2d253a23af3b3c, type: 3}
 --- !u!23 &8239301373551706918
 MeshRenderer:
   m_ObjectHideFlags: 0

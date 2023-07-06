@@ -57,7 +57,7 @@ MonoBehaviour:
   _minTotalOtherBranches: 0
   _obstacleLayers:
     serializedVersion: 2
-    m_Bits: 1073741825
+    m_Bits: 1
   _surfaceLayers:
     serializedVersion: 2
     m_Bits: 1
