@@ -46,14 +46,14 @@ namespace games.noio.planter
         {
             InitializeEmptyBranchOptions();
             NormalizeProbabilities();
-            AddPreviewMesh();
+            AddOrUpdatePreviewMesh();
         }
 
         public void OnBranchOptionRemoved(int removeIndex)
         {
         }
 
-        public void AddPreviewMesh()
+        public void AddOrUpdatePreviewMesh()
         {
             if (_branchOptions == null)
             {
@@ -76,9 +76,10 @@ namespace games.noio.planter
                         meshRenderer = gameObject.AddComponent<MeshRenderer>();
                     }
 
-                    meshFilter.sharedMesh = option.Template.GetMeshVariant(0);
+                    meshFilter.sharedMesh = option.Template.GetRandomMeshVariant();
                     meshRenderer.sharedMaterials =
                         option.Template.GetComponent<MeshRenderer>().sharedMaterials;
+                    
                     if (meshFilter.sharedMesh != null)
                     {
                         /*
@@ -142,7 +143,7 @@ namespace games.noio.planter
             });
 
             NormalizeProbabilities();
-            AddPreviewMesh();
+            AddOrUpdatePreviewMesh();
 
             EditorUtility.SetDirty(this);
         }

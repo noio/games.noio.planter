@@ -6,6 +6,7 @@
             <ui:Label tabindex="-1" text="Which branches grow from this socket?" display-tooltip-when-elided="true" class="description" />
         </ui:VisualElement>
         <ui:ListView focusable="true" binding-path="_branchOptions" show-bound-collection-size="false" show-add-remove-footer="true" show-border="true" reorderable="true" virtualization-method="DynamicHeight" name="options-list" />
+        <ui:Button text="Refresh Preview" display-tooltip-when-elided="true" name="refresh-preview-button" style="margin-top: 5px; height: 26px;" />
     </ui:VisualElement>
     <ui:VisualElement style="flex-grow: 1; background-color: rgba(0, 0, 0, 0);" />
 </ui:UXML>

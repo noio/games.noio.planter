@@ -67,6 +67,16 @@ MonoBehaviour:
   _growUpwards: 0.14
   _faceUpwards: 0
   _meshVariants: []
+  _meshVariants2:
+  - _mesh: {fileID: 8923733792915768573, guid: becec246d79654499b2d253a23af3b3c, type: 3}
+    _probabilityPercent: 25
+  - _mesh: {fileID: -7582448455107326792, guid: becec246d79654499b2d253a23af3b3c,
+      type: 3}
+    _probabilityPercent: 25
+  - _mesh: {fileID: 8415438874363089060, guid: becec246d79654499b2d253a23af3b3c, type: 3}
+    _probabilityPercent: 25
+  - _mesh: {fileID: 2894604443724818775, guid: becec246d79654499b2d253a23af3b3c, type: 3}
+    _probabilityPercent: 25
 --- !u!33 &4802260665251460202
 MeshFilter:
   m_ObjectHideFlags: 0

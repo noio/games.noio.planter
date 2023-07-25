@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
@@ -42,11 +43,20 @@ namespace games.noio.planter.Editor
 
             _prefabStageWarning = tree.Q<VisualElement>("prefab-stage-warning");
 
+            var meshVariantList = tree.Q<ListView>("mesh-variants-list");
+            meshVariantList.itemsAdded += HandleVariantsChanged;
+            meshVariantList.itemsRemoved += HandleVariantsChanged;
+
             CheckCreateSocketButtonEnabled();
 
             // var defaultInspector = tree.Q<Foldout>("default-inspector");
             // InspectorElement.FillDefaultInspector(defaultInspector, serializedObject, this);
             return tree;
+        }
+
+        void HandleVariantsChanged(IEnumerable<int> obj)
+        {
+            _template.NormalizeMeshVariantProbabilities();
         }
 
         void CheckCreateSocketButtonEnabled()

@@ -33,6 +33,8 @@ namespace games.noio.planter
                     flexDirection = FlexDirection.Row
                 }
             };
+            button.clicked += () => { ShowAssetPickerDropdown(property); };
+            
             var label = new Label("▼")
             {
                 style =
@@ -42,11 +44,18 @@ namespace games.noio.planter
                 }
             };
 
-            button.clicked += () => { ShowAssetPickerDropdown(property); };
-
-            container.Add(new PropertyField(property));
+            var propertyField = new PropertyField(property)
+            {
+                style =
+                {
+                    flexGrow = 1
+                }
+            };
+            
+            container.Add(propertyField);
             button.Add(label);
             container.Add(button);
+            
             return container;
         }
 

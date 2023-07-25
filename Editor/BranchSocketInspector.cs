@@ -28,6 +28,9 @@ namespace games.noio.planter.Editor
             _optionList.itemsAdded += HandleOptionsChanged;
             _optionList.itemsRemoved += HandleOptionsChanged;
 
+            var refreshButton = tree.Q<Button>("refresh-preview-button");
+            refreshButton.clicked += _branchSocket.AddOrUpdatePreviewMesh;
+
             // EditorApplication.delayCall += BindOptionProbabilityListeners;
 
             return tree;

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -71,6 +72,7 @@ namespace games.noio.planter
         bool _faceUpwards;
 
         [SerializeField] Mesh[] _meshVariants;
+        [SerializeField] BranchMeshVariant[] _meshVariants2;
 
         #endregion
 
@@ -152,31 +154,63 @@ namespace games.noio.planter
 
         public Mesh GetRandomMeshVariant()
         {
-            if (_meshVariants.Length == 0)
+            if (_meshVariants2.Length > 0)
             {
-                return GetComponent<MeshFilter>().sharedMesh;
+                var picked = Utils.Utils.PickWeighted(_meshVariants2, v => v.ProbabilityPercent);
+                if (picked != null && picked.Mesh != null)
+                {
+                    return picked.Mesh;
+                }
             }
 
-            var idx = Random.Range(0, _meshVariants.Length);
-            return _meshVariants[idx];
+            /*
+             * Fallback: (could still return null if no mesh is set)
+             */
+            return GetComponent<MeshFilter>().sharedMesh;
+        }
+        
+        public void NormalizeMeshVariantProbabilities()
+        {
+            switch (_meshVariants2.Length)
+            {
+                case 0:
+                    return;
+                case 1:
+                    _meshVariants2[0].ProbabilityPercent = 100;
+                    return;
+            }
+
+            var factor = _meshVariants2.Sum(bo => bo.ProbabilityPercent) / 100f;
+            foreach (var bso in _meshVariants2)
+            {
+                if (factor > 0)
+                {
+                    bso.ProbabilityPercent /= factor;
+                }
+                else
+                {
+                    bso.ProbabilityPercent = 100f / _meshVariants2.Length;
+                }
+            }
         }
 
         public Branch CreateBranch()
         {
             _renderer = _renderer ? _renderer : GetComponent<Renderer>();
 
-            var created = new GameObject { name = name, layer = gameObject.layer };
+            var gameOb = new GameObject { name = name, layer = gameObject.layer };
+            gameOb.isStatic = true;
 
-            var branch = created.AddComponent<Branch>();
+            var branch = gameOb.AddComponent<Branch>();
 
-            var meshFilter = created.AddComponent<MeshFilter>();
+            var meshFilter = gameOb.AddComponent<MeshFilter>();
             meshFilter.sharedMesh = GetRandomMeshVariant();
 
-            var newRenderer = created.AddComponent<MeshRenderer>();
+            var newRenderer = gameOb.AddComponent<MeshRenderer>();
             newRenderer.sharedMaterials = _renderer.sharedMaterials;
             newRenderer.shadowCastingMode = _renderer.shadowCastingMode;
 
-            var newCapsuleCollider = created.AddComponent<CapsuleCollider>();
+            var newCapsuleCollider = gameOb.AddComponent<CapsuleCollider>();
             newCapsuleCollider.center = Capsule.center;
             newCapsuleCollider.direction = Capsule.direction;
             newCapsuleCollider.height = Capsule.height;
@@ -216,7 +250,7 @@ namespace games.noio.planter
             var go = new GameObject($"Socket [{Sockets.Count}]");
             go.transform.SetParent(transform, false);
             var l = Capsule.height;
-            
+
             switch (Sockets.Count)
             {
                 case 0:
@@ -255,7 +289,7 @@ namespace games.noio.planter
             Undo.RecordObject(gameObject, "Refresh Sockets");
             foreach (var socket in GetComponentsInChildren<BranchSocket>(true))
             {
-                socket.AddPreviewMesh();
+                socket.AddOrUpdatePreviewMesh();
             }
         }
 
