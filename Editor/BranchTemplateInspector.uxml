@@ -28,7 +28,7 @@
         <ui:Slider picking-mode="Ignore" label="Grow Upwards" value="0" high-value="1" show-input-field="true" name="grow-upwards" binding-path="_growUpwards" low-value="-1" class="unity-base-field__aligned" style="justify-content: flex-start; align-items: flex-start;" />
         <ui:Toggle label="Face Upwards" name="face-upwards" binding-path="_faceUpwards" class="unity-base-field__aligned" />
         <ui:Label tabindex="-1" text="Mesh Variants" display-tooltip-when-elided="true" style="margin-left: 3px; margin-top: 12px; margin-bottom: 2px;" />
-        <ui:ListView focusable="true" binding-path="_meshVariants2" show-bound-collection-size="false" show-add-remove-footer="true" reorderable="true" show-border="true" show-foldout-header="false" virtualization-method="DynamicHeight" name="mesh-variants-list" style="margin-left: 2px;" />
+        <ui:ListView focusable="true" binding-path="_meshVariants" show-bound-collection-size="false" show-add-remove-footer="true" reorderable="true" show-border="true" show-foldout-header="false" virtualization-method="DynamicHeight" name="mesh-variants-list" style="margin-left: 2px;" />
     </ui:VisualElement>
     <ui:VisualElement name="sockets" class="section-box">
         <ui:VisualElement class="header-line">

@@ -71,8 +71,7 @@ namespace games.noio.planter
         [SerializeField]
         bool _faceUpwards;
 
-        [SerializeField] Mesh[] _meshVariants;
-        [SerializeField] BranchMeshVariant[] _meshVariants2;
+        [SerializeField] BranchMeshVariant[] _meshVariants;
 
         #endregion
 
@@ -145,18 +144,11 @@ namespace games.noio.planter
 
         #endregion
 
-        public Mesh GetMeshVariant(int variant)
-        {
-            return _meshVariants.Length == 0
-                ? GetComponent<MeshFilter>().sharedMesh
-                : _meshVariants[variant % _meshVariants.Length];
-        }
-
         public Mesh GetRandomMeshVariant()
         {
-            if (_meshVariants2.Length > 0)
+            if (_meshVariants.Length > 0)
             {
-                var picked = Utils.Utils.PickWeighted(_meshVariants2, v => v.ProbabilityPercent);
+                var picked = Utils.Utils.PickWeighted(_meshVariants, v => v.ProbabilityPercent);
                 if (picked != null && picked.Mesh != null)
                 {
                     return picked.Mesh;
@@ -171,17 +163,17 @@ namespace games.noio.planter
         
         public void NormalizeMeshVariantProbabilities()
         {
-            switch (_meshVariants2.Length)
+            switch (_meshVariants.Length)
             {
                 case 0:
                     return;
                 case 1:
-                    _meshVariants2[0].ProbabilityPercent = 100;
+                    _meshVariants[0].ProbabilityPercent = 100;
                     return;
             }
 
-            var factor = _meshVariants2.Sum(bo => bo.ProbabilityPercent) / 100f;
-            foreach (var bso in _meshVariants2)
+            var factor = _meshVariants.Sum(bo => bo.ProbabilityPercent) / 100f;
+            foreach (var bso in _meshVariants)
             {
                 if (factor > 0)
                 {
@@ -189,7 +181,7 @@ namespace games.noio.planter
                 }
                 else
                 {
-                    bso.ProbabilityPercent = 100f / _meshVariants2.Length;
+                    bso.ProbabilityPercent = 100f / _meshVariants.Length;
                 }
             }
         }
