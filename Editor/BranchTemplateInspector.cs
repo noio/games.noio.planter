@@ -33,10 +33,6 @@ namespace games.noio.planter.Editor
             var surfaceLayersProp = serializedObject.FindProperty("_surfaceLayers");
             surfaceDistance.SetEnabled(surfaceLayersProp.intValue != 0);
 
-            // var maxPivotAngle = tree.Q<Slider>("max-pivot-angle");
-            // var maxPivotAngleDisplay = tree.Q<CircleFillElement>("max-pivot-angle-display");
-            // maxPivotAngle.RegisterValueChangedCallback(evt => maxPivotAngleDisplay.Arc = evt.newValue);
-
             _template.FindSockets();
             _createSocketButton = tree.Q<Button>("create-socket-button");
             _createSocketButton.clicked += HandleCreateSocketButtonClicked;
