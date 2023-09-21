@@ -3,6 +3,8 @@
 The **plant simulation** from [**Cloud Gardens**](https://store.steampowered.com/app/1372320/Cloud_Gardens/) 
 as a Unity package for level design.
 
+**Only Tested with Unity 2022 and up. It should work in older versions, because it's just C#8.0+ features that are missing.**
+
 ## Getting Started
 
 1. Open the Package Manager in Unity.
