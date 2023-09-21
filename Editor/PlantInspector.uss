@@ -21,3 +21,7 @@
     border-bottom-left-radius: 0;
     -unity-font-style: bold;
 }
+
+.unity-label {
+    overflow: hidden;
+}

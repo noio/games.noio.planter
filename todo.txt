@@ -7,3 +7,5 @@
 - [x] "onboarding": add plant component, create species with button, create branch with button
 - [ ] fix capsule collider position button
 - [x] plant status display
+- [ ] Remove colliders after simulating
+- [ ] Remove plant component on play?

@@ -24,6 +24,13 @@ namespace games.noio.planter
         [SerializeField]
         bool _restartWhenMoved;
 
+        [Tooltip("Keep colliders on individual branches after simulation is over")]
+        [SerializeField]
+        bool _keepColliders = false;
+        
+        [Tooltip("Keep 'Branch' components on individual branches after simulation is over")]
+        [SerializeField] bool _keepBranchComponents = false;
+
         [SerializeField] Transform _rootTransform;
         [SerializeField] PlantSpecies _species;
         [SerializeField] PlantState _state;
@@ -244,7 +251,8 @@ namespace games.noio.planter
 
         bool IsCacheValid()
         {
-            return _branchTypes is { Count: > 0 } && _branches is { Count: > 0 };
+            return _branchTypes != null && _branchTypes.Count > 0 &&
+                   _branches != null && _branches.Count > 0;
         }
 
         /// <summary>
@@ -519,8 +527,42 @@ namespace games.noio.planter
         void OnGrowComplete()
         {
             Undo.RecordObject(this, "Complete Growth");
+            if (_keepColliders == false)
+            {
+                /*
+                 * Do this one frame later in case we created some colliders in this
+                 * frame still.
+                 */
+                EditorApplication.delayCall += RemoveUnwantedComponents;
+            }
+
             _state = PlantState.Done;
             _growComplete?.Invoke();
+        }
+
+        /// <summary>
+        /// Remove "CapsuleCollider" and "Branch" components
+        /// from all branches.
+        /// </summary>
+        void RemoveUnwantedComponents()
+        {
+            foreach (var branch in _branches)
+            {
+                if (_keepColliders == false && branch.TryGetComponent(out CapsuleCollider capsule))
+                {
+                    DestroyImmediate(capsule);
+                }
+
+                if (_keepBranchComponents == false)
+                {
+                    DestroyImmediate(branch);
+                }
+            }
+
+            if (_keepBranchComponents == false)
+            {
+                _branches.Clear();
+            }
         }
 
         void OnGrowSuccess()
