@@ -34,7 +34,7 @@ namespace games.noio.planter
         [SerializeField] Transform _rootTransform;
         [SerializeField] PlantSpecies _species;
         [SerializeField] PlantState _state;
-        [SerializeField] Vector3 _grownAtLocation;
+        [SerializeField] Vector3 _grownAtPosition;
         [SerializeField] Quaternion _grownAtRotation;
         [SerializeField] int _growSucceeded;
         [SerializeField] int _growFailed;
@@ -66,17 +66,7 @@ namespace games.noio.planter
 
         void Update()
         {
-            if (_restartWhenMoved &&
-                _state != PlantState.MissingData &&
-                (Vector3.Distance(transform.position, _grownAtLocation) > .01f ||
-                 Quaternion.Angle(transform.rotation, _grownAtRotation) > 1))
-            {
-                ResetPlant();
-                Undo.RecordObject(this, "Start Growing");
-                _state = PlantState.Growing;
-                _grownAtLocation = transform.position;
-                _grownAtRotation = transform.rotation;
-            }
+            
 
             switch (_state)
             {
@@ -113,6 +103,21 @@ namespace games.noio.planter
             ResetPlant();
             EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
             _state = PlantState.Growing;
+        }
+
+        public void CheckIfMovedAndRestart()
+        {
+            if (_restartWhenMoved &&
+                _state != PlantState.MissingData &&
+                (Vector3.Distance(transform.localPosition, _grownAtPosition) > .01f ||
+                 Quaternion.Angle(transform.localRotation, _grownAtRotation) > 1))
+            {
+                ResetPlant();
+                Undo.RecordObject(this, "Start Growing");
+                _state = PlantState.Growing;
+                _grownAtPosition = transform.localPosition;
+                _grownAtRotation = transform.localRotation;
+            }
         }
 
         void ResetPlant()

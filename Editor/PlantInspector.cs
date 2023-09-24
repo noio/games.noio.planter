@@ -38,6 +38,7 @@ namespace games.noio.planter.Editor
 
         void EditorUpdate()
         {
+            (target as Plant).CheckIfMovedAndRestart();
         }
 
         public override VisualElement CreateInspectorGUI()
