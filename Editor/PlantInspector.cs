@@ -1,6 +1,7 @@
 // (C)2023 @noio_games
 // Thomas van den Berg
 
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -20,18 +21,31 @@ namespace games.noio.planter.Editor
         #endregion
 
         SerializedProperty _speciesProp;
+        SerializedProperty _seedProp;
         VisualElement _speciesInspector;
         VisualElement _branchStatusParent;
         Button _createSpeciesButton;
         ObjectField _speciesField;
         Dictionary<BranchTemplate, VisualElement> _branchStatusElements;
         Plant _plant;
-        double _lastReset;
+        double _plantRegrowTime;
+        Vector3 _lastPosition;
+        Quaternion _lastRotation;
 
         #region MONOBEHAVIOUR METHODS
 
         void OnEnable()
         {
+            _plant = target as Plant;
+
+            _seedProp = serializedObject.FindProperty("_seed");
+            _speciesProp = serializedObject.FindProperty("_species");
+
+            _lastPosition = _plant.GrownAtPosition;
+            _lastRotation = _plant.GrownAtRotation;
+
+            _plantRegrowTime = Double.PositiveInfinity;
+
             EditorApplication.update -= EditorUpdate;
             EditorApplication.update += EditorUpdate;
         }
@@ -45,13 +59,15 @@ namespace games.noio.planter.Editor
 
         public override VisualElement CreateInspectorGUI()
         {
-            _plant = target as Plant;
             _plant.BranchAdded += RefreshBranchStatus;
 
             var tree = _visualTree.CloneTree();
 
+            var incrementSeedButton = tree.Q<Button>("increment-seed-button");
+            incrementSeedButton.clicked += HandleIncrementSeedButtonClicked;
+
             var restartButton = tree.Q<Button>("restart-button");
-            restartButton.clicked += () => _plant.Restart();
+            restartButton.clicked += () => _plant.Regrow();
 
             _speciesInspector = tree.Q<VisualElement>("species-inspector");
             _speciesField = tree.Q<ObjectField>("species-field");
@@ -59,8 +75,6 @@ namespace games.noio.planter.Editor
             {
                 CheckShowSpeciesInspector(evt.newValue as PlantSpecies);
             });
-
-            _speciesProp = serializedObject.FindProperty("_species");
 
             _createSpeciesButton = tree.Q<Button>("create-button");
             _createSpeciesButton.clicked += () =>
@@ -70,7 +84,7 @@ namespace games.noio.planter.Editor
                 serializedObject.ApplyModifiedProperties();
                 CheckShowSpeciesInspector(species);
 
-                _plant.Restart();
+                _plant.Regrow();
             };
 
             var stateProp = serializedObject.FindProperty("_state");
@@ -94,12 +108,47 @@ namespace games.noio.planter.Editor
             return tree;
         }
 
+        void HandleIncrementSeedButtonClicked()
+        {
+            _seedProp.intValue++;
+            serializedObject.ApplyModifiedProperties();
+            _plant?.Regrow();
+        }
+
         void EditorUpdate()
         {
-            var plant = target as Plant;
-            if (plant == null)
+            if (_plant == null)
             {
                 return;
+            }
+
+            if (_plant.RegrowWhenMoved == false)
+            {
+                return;
+            }
+
+            /*
+             * Regrown on move, but debounced.
+             *
+             * - get plant last grow position/rotation on init
+             * - everytime plant is moved (here), set a delay
+             * - keep setting delay as long as plant is moving
+             * - at the end of delay, reset plant + remove delay
+             */
+
+            var pos = _plant.transform.localPosition;
+            var rot = _plant.transform.localRotation;
+
+            var didMove = Vector3.Distance(pos, _lastPosition) > .01f ||
+                          Quaternion.Angle(rot, _lastRotation) > 1;
+
+            var time = EditorApplication.timeSinceStartup;
+            if (didMove)
+            {
+                _lastPosition = pos;
+                _lastRotation = rot;
+
+                _plantRegrowTime = time + .15f;
             }
 
             /*
@@ -107,13 +156,12 @@ namespace games.noio.planter.Editor
              * It's debounced with a small delay to prevent the
              * editor becoming less responsive.
              */
-            var time = EditorApplication.timeSinceStartup;
-            if (time > _lastReset + .3f)
+
+            if (time > _plantRegrowTime)
             {
-                if (plant.CheckIfMovedAndReset())
-                {
-                    _lastReset = time;
-                }
+                Undo.RecordObject(this, $"Regrow {_plant.name}");
+                _plant.Regrow();
+                _plantRegrowTime = double.PositiveInfinity; // removes delay
             }
         }
 

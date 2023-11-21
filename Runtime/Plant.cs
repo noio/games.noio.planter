@@ -23,9 +23,14 @@ namespace games.noio.planter
 
         #region PUBLIC AND SERIALIZED FIELDS
 
+        [Tooltip("Seed for the random generator. Plant will still have different shape if placed " +
+                 "on different colliders.")]
+        [SerializeField]
+        int _seed;
+
         [Tooltip("Restart simulation when the GameObject is moved")]
         [SerializeField]
-        bool _restartWhenMoved;
+        bool _regrowWhenMoved = true;
 
         [Tooltip("Keep colliders on individual branches after simulation is over")]
         [SerializeField]
@@ -37,7 +42,6 @@ namespace games.noio.planter
 
         [SerializeField] Branch _rootBranch;
         [SerializeField] PlantSpecies _species;
-        [SerializeField] int _seed;
         [SerializeField] Random.State _randomState;
         [SerializeField] PlantState _state;
         [SerializeField] Vector3 _grownAtPosition;
@@ -65,6 +69,10 @@ namespace games.noio.planter
         public int FailedAttemptsSinceBranchAdded { get; private set; }
 
         public IReadOnlyList<BranchType> BranchTypes => _branchTypes;
+        
+        public bool RegrowWhenMoved => _regrowWhenMoved;
+        public Vector3 GrownAtPosition => _grownAtPosition;
+        public Quaternion GrownAtRotation => _grownAtRotation;
 
         #endregion
 
@@ -102,30 +110,17 @@ namespace games.noio.planter
 
         #endregion
 
-        public void Restart()
+        public void Regrow()
         {
+            if (_state == PlantState.MissingData)
+            {
+                return;
+            }
+            
             ResetPlant();
+
             ForceQueueUpdate();
             _state = PlantState.Growing;
-        }
-
-        public bool CheckIfMovedAndReset()
-        {
-            if (_restartWhenMoved &&
-                _state != PlantState.MissingData &&
-                (Vector3.Distance(transform.localPosition, _grownAtPosition) > .01f ||
-                 Quaternion.Angle(transform.localRotation, _grownAtRotation) > 1))
-            {
-                ResetPlant();
-                Undo.RecordObject(this, "Start Growing");
-                _state = PlantState.Growing;
-                _grownAtPosition = transform.localPosition;
-                _grownAtRotation = transform.localRotation;
-
-                return true;
-            }
-
-            return false;
         }
 
         static void ForceQueueUpdate()
@@ -141,6 +136,10 @@ namespace games.noio.planter
         void ResetPlant()
         {
             CheckSetup();
+
+            _grownAtPosition = transform.localPosition;
+            _grownAtRotation = transform.localRotation;
+
             if (_rootBranch == null || _rootBranch.Template != _species.RootBranch)
             {
                 /*
@@ -188,6 +187,8 @@ namespace games.noio.planter
 
             /*
              * Block to prevent plant from growing immediately
+             * Probably not really necessary, ever user of ResetPlant()
+             * immediately sets state to Growing.
              */
             _state = PlantState.Done;
         }
