@@ -1,4 +1,7 @@
-﻿using System;
+﻿// (C)2023 @noio_games
+// Thomas van den Berg
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -26,12 +29,12 @@ namespace games.noio.planter
 
         [Tooltip("Keep colliders on individual branches after simulation is over")]
         [SerializeField]
-        bool _keepColliders = false;
+        bool _keepColliders;
 
         [Tooltip("Keep 'Branch' components on individual branches after simulation is over")]
         [SerializeField]
-        bool _keepBranchComponents = false;
-        
+        bool _keepBranchComponents;
+
         [SerializeField] Branch _rootBranch;
         [SerializeField] PlantSpecies _species;
         [SerializeField] int _seed;
@@ -82,7 +85,7 @@ namespace games.noio.planter
 
                     if (_state == PlantState.Growing)
                     {
-                        EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
+                        ForceQueueUpdate();
                     }
 
                     break;
@@ -102,11 +105,11 @@ namespace games.noio.planter
         public void Restart()
         {
             ResetPlant();
-            EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
+            ForceQueueUpdate();
             _state = PlantState.Growing;
         }
 
-        public void CheckIfMovedAndRestart()
+        public bool CheckIfMovedAndReset()
         {
             if (_restartWhenMoved &&
                 _state != PlantState.MissingData &&
@@ -118,7 +121,21 @@ namespace games.noio.planter
                 _state = PlantState.Growing;
                 _grownAtPosition = transform.localPosition;
                 _grownAtRotation = transform.localRotation;
+
+                return true;
             }
+
+            return false;
+        }
+
+        static void ForceQueueUpdate()
+        {
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                EditorApplication.delayCall += EditorApplication.QueuePlayerLoopUpdate;
+            }
+#endif
         }
 
         void ResetPlant()
@@ -251,7 +268,6 @@ namespace games.noio.planter
                 {
                     _branchesWithOpenSockets.Enqueue(branch);
                 }
-                
             }
 
             UpdateGrowableBranchTypes();
@@ -529,13 +545,13 @@ namespace games.noio.planter
             {
                 var branch = AddBranch(parent, _nextSocketIndex, branchType,
                     socketLocalPos, Quaternion.Inverse(parent.transform.rotation) * globalRot);
-                                 
+
                 /*
                  * When successfully adding a branch we call SyncTransforms because
                  * otherwise calls CheckCapsule will not hit the newly created colliders
                  */
                 Physics.SyncTransforms();
-                
+
                 if (branch.HasOpenSockets())
                 {
                     _branchesWithOpenSockets.Enqueue(branch);
@@ -580,8 +596,8 @@ namespace games.noio.planter
         }
 
         /// <summary>
-        /// Remove "CapsuleCollider" and "Branch" components
-        /// from all branches.
+        ///     Remove "CapsuleCollider" and "Branch" components
+        ///     from all branches.
         /// </summary>
         void RemoveUnwantedComponents()
         {

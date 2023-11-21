@@ -1,3 +1,6 @@
+// (C)2023 @noio_games
+// Thomas van den Berg
+
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.UIElements;
@@ -13,6 +16,9 @@ namespace games.noio.planter.Editor
 
         [SerializeField] VisualTreeAsset _visualTree;
         [SerializeField] VisualTreeAsset _branchStatusVisualTree;
+
+        #endregion
+
         SerializedProperty _speciesProp;
         VisualElement _speciesInspector;
         VisualElement _branchStatusParent;
@@ -20,8 +26,7 @@ namespace games.noio.planter.Editor
         ObjectField _speciesField;
         Dictionary<BranchTemplate, VisualElement> _branchStatusElements;
         Plant _plant;
-
-        #endregion
+        double _lastReset;
 
         #region MONOBEHAVIOUR METHODS
 
@@ -36,10 +41,7 @@ namespace games.noio.planter.Editor
             EditorApplication.update -= EditorUpdate;
         }
 
-        void EditorUpdate()
-        {
-            (target as Plant)?.CheckIfMovedAndRestart();
-        }
+        #endregion
 
         public override VisualElement CreateInspectorGUI()
         {
@@ -91,8 +93,29 @@ namespace games.noio.planter.Editor
 
             return tree;
         }
-        
-        #endregion
+
+        void EditorUpdate()
+        {
+            var plant = target as Plant;
+            if (plant == null)
+            {
+                return;
+            }
+
+            /*
+             * Automatic reset when moving object.
+             * It's debounced with a small delay to prevent the
+             * editor becoming less responsive.
+             */
+            var time = EditorApplication.timeSinceStartup;
+            if (time > _lastReset + .3f)
+            {
+                if (plant.CheckIfMovedAndReset())
+                {
+                    _lastReset = time;
+                }
+            }
+        }
 
         static void SetVisibleIfEnumEquals(Label doneLabel, SerializedProperty property,
             PlantState                           plantState)

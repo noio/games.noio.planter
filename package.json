@@ -1,6 +1,6 @@
 {
   "name": "games.noio.planter",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "displayName": "Planter",
   "description": "The plant growing simulation from Cloud Gardens as an Editor package",
   "unity": "2022.2",
