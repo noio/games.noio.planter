@@ -15,7 +15,7 @@ namespace games.noio.planter
         public event Action BranchAdded;
         const int MaxFailedGrowAttempts = 5000;
         const int GrowAttemptsPerFrame = 200;
-        const int BranchesPerFrame = 10;
+        const int BranchesPerFrame = 20;
         static readonly Collider[] ColliderCache = new Collider[4];
 
         #region PUBLIC AND SERIALIZED FIELDS
@@ -27,12 +27,15 @@ namespace games.noio.planter
         [Tooltip("Keep colliders on individual branches after simulation is over")]
         [SerializeField]
         bool _keepColliders = false;
-        
-        [Tooltip("Keep 'Branch' components on individual branches after simulation is over")]
-        [SerializeField] bool _keepBranchComponents = false;
 
-        [SerializeField] Transform _rootTransform;
+        [Tooltip("Keep 'Branch' components on individual branches after simulation is over")]
+        [SerializeField]
+        bool _keepBranchComponents = false;
+        
+        [SerializeField] Branch _rootBranch;
         [SerializeField] PlantSpecies _species;
+        [SerializeField] int _seed;
+        [SerializeField] Random.State _randomState;
         [SerializeField] PlantState _state;
         [SerializeField] Vector3 _grownAtPosition;
         [SerializeField] Quaternion _grownAtRotation;
@@ -66,8 +69,6 @@ namespace games.noio.planter
 
         void Update()
         {
-            
-
             switch (_state)
             {
                 case PlantState.Growing:
@@ -123,37 +124,45 @@ namespace games.noio.planter
         void ResetPlant()
         {
             CheckSetup();
-
-            if (_rootTransform != null)
+            if (_rootBranch == null || _rootBranch.Template != _species.RootBranch)
             {
                 /*
-                 * Clear out the nodes
+                 * If the RootBranch is not set, actually clear out ALL
+                 * children of this GameObject
                  */
-                for (var i = _rootTransform.childCount - 1; i >= 0; i--)
-                {
-                    var child = _rootTransform.GetChild(i);
-                    DestroyImmediate(child.gameObject);
-                }
+                ClearChildren(transform);
             }
             else
             {
                 /*
-                 * If the RootTransform is not set, actually clear out ALL
-                 * children of this GameObject
+                 * Clear out the nodes
                  */
-                for (var i = transform.childCount - 1; i >= 0; i--)
-                {
-                    var child = transform.GetChild(i);
-                    DestroyImmediate(child.gameObject);
-                }
+                ClearChildren(_rootBranch.transform);
             }
 
-            ClearCache();
-            CreateRootTransform();
+            /*
+             * This will clear cache if it's not valid, but otherwise
+             * it will preserve the root branch.
+             * We want to preserve the root branch because dragging in inspector
+             * is annoying otherwise:
+             * if the collider is constantly recreated while dragging,
+             * the raycast that Unity uses for "move on surface" will hit the
+             * re-created collider. (But unity is smart enough to ignore existing children
+             * of the dragged object)
+             */
+            TryReconstructCacheFromHierarchy();
+
             PreprocessBranchType(_species.RootBranch);
-            AddBranch(null, 0, BranchTypes[0], Vector3.zero, Quaternion.identity);
+
+            CreateRootBranch();
+
             _branchesWithOpenSockets.Enqueue(_branches[0]);
+            _nextSocketIndex = 0;
+
             UpdateGrowableBranchTypes();
+
+            Random.InitState(_seed);
+            _randomState = Random.state;
 
             FailedAttemptsSinceBranchAdded = 0;
             _growSucceeded = 0;
@@ -164,6 +173,15 @@ namespace games.noio.planter
              * Block to prevent plant from growing immediately
              */
             _state = PlantState.Done;
+        }
+
+        static void ClearChildren(Transform parent)
+        {
+            for (var i = parent.childCount - 1; i >= 0; i--)
+            {
+                var child = parent.GetChild(i);
+                DestroyImmediate(child.gameObject);
+            }
         }
 
         void PrepareForGrowing()
@@ -233,6 +251,7 @@ namespace games.noio.planter
                 {
                     _branchesWithOpenSockets.Enqueue(branch);
                 }
+                
             }
 
             UpdateGrowableBranchTypes();
@@ -461,10 +480,19 @@ namespace games.noio.planter
 
             // var parent = GetParentAndSocketPosition(address, out var socketRelPos, out var parentRelRot);
 
+            /*
+             * These are actually the only calls to random in the entire plant algorithm!
+             * Neat!
+             * (We restore and save state here, in case some other code uses random
+             * in between calls to Update().
+             */
+            Random.state = _randomState;
+
             // Try a random orientation for the child node
             var xRot = Random.Range(-template.MaxPivotAngle, template.MaxPivotAngle);
             var yRot = Random.Range(-template.MaxPivotAngle, template.MaxPivotAngle);
             var zRot = Random.Range(-template.MaxRollAngle, template.MaxRollAngle);
+            _randomState = Random.state;
 
             /*
              * We do all rotation operations on a global rotation here,
@@ -501,7 +529,13 @@ namespace games.noio.planter
             {
                 var branch = AddBranch(parent, _nextSocketIndex, branchType,
                     socketLocalPos, Quaternion.Inverse(parent.transform.rotation) * globalRot);
-
+                                 
+                /*
+                 * When successfully adding a branch we call SyncTransforms because
+                 * otherwise calls CheckCapsule will not hit the newly created colliders
+                 */
+                Physics.SyncTransforms();
+                
                 if (branch.HasOpenSockets())
                 {
                     _branchesWithOpenSockets.Enqueue(branch);
@@ -748,16 +782,11 @@ namespace games.noio.planter
             }
         }
 
-        void CreateRootTransform()
+        void CreateRootBranch()
         {
-            if (_species?.RootBranch != null)
+            if (_species?.RootBranch != null && _rootBranch == null)
             {
-                if (_rootTransform == null)
-                {
-                    _rootTransform = new GameObject("Root Transform").transform;
-                    _rootTransform.SetParent(transform, false);
-                    _rootTransform.rotation = Quaternion.Euler(-90, 0, 0);
-                }
+                _rootBranch = AddBranch(null, 0, BranchTypes[0], Vector3.zero, Quaternion.Euler(-90, 0, 0));
             }
         }
 
@@ -779,7 +808,7 @@ namespace games.noio.planter
             }
             else
             {
-                branchTransform.SetParent(_rootTransform, false);
+                branchTransform.SetParent(transform, false);
             }
 
             branchTransform.SetLocalPositionAndRotation(localPosition, localRotation);

@@ -1,7 +1,11 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
     <Style src="project://database/Assets/Packages/games.noio.planter/Editor/PlantInspector.uss?fileID=7433441132597879392&amp;guid=6dd4e1487fc7f4ccb9504cbb41ebd2ba&amp;type=3#PlantInspector" />
     <Style src="project://database/Assets/Packages/games.noio.planter/Editor/SectionBox.uss?fileID=7433441132597879392&amp;guid=11fbe3c0348a1435881d7d26ef42bd78&amp;type=3#SectionBox" />
-    <ui:Button display-tooltip-when-elided="true" text="Restart" name="restart-button" style="flex-direction: row; justify-content: center; align-items: center; align-self: stretch; flex-grow: 0; height: 42px; margin-bottom: 5px;" />
+    <ui:Button display-tooltip-when-elided="true" text="Regrow" name="restart-button" style="flex-direction: row; justify-content: center; align-items: center; align-self: stretch; flex-grow: 0; height: 42px; margin-bottom: 5px;" />
+    <ui:VisualElement style="flex-grow: 0; background-color: rgba(0, 0, 0, 0); flex-direction: row; align-items: stretch;">
+        <ui:IntegerField label="Seed" value="42" name="seed-field" binding-path="_seed" style="flex-grow: 1;" />
+        <ui:Button text="++" display-tooltip-when-elided="true" name="increment-seed-button" />
+    </ui:VisualElement>
     <ui:Toggle label="Restart When Moved" binding-path="_restartWhenMoved" name="restart-when-moved-toggle" class="unity-base-field__aligned" />
     <ui:Toggle label="Keep Colliders" binding-path="_keepColliders" name="keep-colliders-toggle" class="unity-base-field__aligned" />
     <ui:Toggle label="Keep Branch Components" binding-path="_keepBranchComponents" name="keep-branch-components-toggle" class="unity-base-field__aligned" />
