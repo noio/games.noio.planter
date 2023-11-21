@@ -33,12 +33,12 @@ namespace games.noio.planter.Editor
 
         void OnDisable()
         {
-            EditorApplication.update += EditorUpdate;
+            EditorApplication.update -= EditorUpdate;
         }
 
         void EditorUpdate()
         {
-            (target as Plant).CheckIfMovedAndRestart();
+            (target as Plant)?.CheckIfMovedAndRestart();
         }
 
         public override VisualElement CreateInspectorGUI()
