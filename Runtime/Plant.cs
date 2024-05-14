@@ -69,7 +69,6 @@ namespace games.noio.planter
         public int FailedAttemptsSinceBranchAdded { get; private set; }
 
         public IReadOnlyList<BranchType> BranchTypes => _branchTypes;
-        
         public bool RegrowWhenMoved => _regrowWhenMoved;
         public Vector3 GrownAtPosition => _grownAtPosition;
         public Quaternion GrownAtRotation => _grownAtRotation;
@@ -116,7 +115,7 @@ namespace games.noio.planter
             {
                 return;
             }
-            
+
             ResetPlant();
 
             ForceQueueUpdate();
@@ -582,7 +581,12 @@ namespace games.noio.planter
 
         void OnGrowComplete()
         {
-            Undo.RecordObject(this, "Complete Growth");
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                Undo.RecordObject(this, "Complete Growth");
+            }
+
             if (_keepColliders == false)
             {
                 /*
@@ -591,6 +595,7 @@ namespace games.noio.planter
                  */
                 EditorApplication.delayCall += RemoveUnwantedComponents;
             }
+#endif
 
             _state = PlantState.Done;
             _growComplete?.Invoke();
@@ -832,7 +837,13 @@ namespace games.noio.planter
 
             branch.name = $"D{branch.Depth} {branchType.Template.name}";
             branch.Template = branchType.Template;
-            Undo.RegisterCreatedObjectUndo(branch.gameObject, $"Added branch for {name}");
+
+#if UNITY_EDITOR
+            if (Application.isPlaying == false)
+            {
+                Undo.RegisterCreatedObjectUndo(branch.gameObject, $"Added branch for {name}");
+            }
+#endif
 
             _branches.Add(branch);
             branchType.TotalCount++;

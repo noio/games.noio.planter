@@ -23,7 +23,6 @@ namespace games.noio.planter
         #endregion
 
 #if UNITY_EDITOR
-#endif
         public static PlantSpecies Create()
         {
             var species = CreateInstance<PlantSpecies>();
@@ -40,5 +39,6 @@ namespace games.noio.planter
             AssetDatabase.SaveAssets();
             return species;
         }
+#endif
     }
 }
