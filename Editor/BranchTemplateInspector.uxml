@@ -1,15 +1,15 @@
 <ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements" xsi="http://www.w3.org/2001/XMLSchema-instance" engine="UnityEngine.UIElements" editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../../../../UIElementsSchema/UIElements.xsd" editor-extension-mode="True">
-    <Style src="project://database/Packages/games.noio.planter/Editor/BranchSocketOptionDrawer.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchSocketOptionDrawer" />
-    <Style src="project://database/Packages/games.noio.planter/Editor/SectionBox.uss?fileID=7433441132597879392&amp;guid=11fbe3c0348a1435881d7d26ef42bd78&amp;type=3#SectionBox" />
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/BranchSocketOptionDrawer.uss?fileID=7433441132597879392&amp;guid=dfe093bd464604b06a4cd26e907e2fb8&amp;type=3#BranchSocketOptionDrawer" />
+    <Style src="project://database/Assets/Packages/games.noio.planter/Editor/SectionBox.uss?fileID=7433441132597879392&amp;guid=11fbe3c0348a1435881d7d26ef42bd78&amp;type=3#SectionBox" />
     <ui:VisualElement name="constraints" class="section-box">
         <ui:VisualElement class="header-line">
             <ui:Label tabindex="-1" text="Constraints" display-tooltip-when-elided="true" class="header" />
             <ui:Label tabindex="-1" text="Can this branch grow?" display-tooltip-when-elided="true" class="description" />
         </ui:VisualElement>
         <ui:VisualElement style="flex-direction: row;">
-            <ui:FloatField label="Depth" value="42.2" name="depth-min" binding-path="_depthMin" class="unity-base-field__aligned" style="flex-grow: 1;" />
+            <ui:IntegerField label="Depth" value="42" binding-path="_depthMin" name="depth-min" class="unity-base-field__aligned" style="width: auto; flex-direction: row; flex-grow: 1;" />
             <ui:Label tabindex="-1" text="—" display-tooltip-when-elided="true" style="-unity-text-align: middle-left; padding-left: 8px;" />
-            <ui:FloatField value="42.2" name="depth-max" binding-path="_depthMax" style="flex-grow: 1;" />
+            <ui:IntegerField value="42" name="depth-max" binding-path="_depthMax" style="flex-grow: 1;" />
         </ui:VisualElement>
         <ui:IntegerField label="Max Count" value="42" name="max-count" binding-path="_maxCount" class="unity-base-field__aligned" />
         <ui:Slider picking-mode="Ignore" label="Quota (%)" value="100" high-value="100" name="quota-slider" binding-path="_quotaPercent" show-input-field="true" class="unity-base-field__aligned" style="flex-grow: 1;" />

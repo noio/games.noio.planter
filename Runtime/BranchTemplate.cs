@@ -21,9 +21,8 @@ namespace games.noio.planter
 
         [Tooltip("Where in the plant is this branch allowed to occur?")]
         [SerializeField]
-        int _depthMin;
+        int _depthMin = 0;
 
-        [Tooltip("Where in the plant is this branch allowed to occur?")]
         [SerializeField]
         int _depthMax = 12;
 

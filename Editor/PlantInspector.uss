@@ -25,3 +25,13 @@
 .unity-label {
     overflow: hidden;
 }
+
+#regrow-lock{
+    background-image: resource("IN LockButton on@2x")
+}
+
+#regrow-lock.regrow-unlocked
+{
+    background-image: resource("IN LockButton act@2x")
+    
+}

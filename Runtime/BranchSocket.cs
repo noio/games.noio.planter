@@ -26,7 +26,7 @@ namespace games.noio.planter
 
         #endregion
 
-        public bool IsBranchOption(BranchTemplate template, out float weight)
+        public bool ContainsBranchOption(BranchTemplate template, out float weight)
         {
             var option = _branchOptions.FirstOrDefault(o => o.Template == template);
             if (option != null)
