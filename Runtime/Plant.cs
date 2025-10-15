@@ -28,7 +28,6 @@ public class Plant : MonoBehaviour
     [SerializeField]
     int _seed;
 
-
     [Tooltip("Keep colliders on individual branches after simulation is over")]
     [SerializeField]
     bool _keepColliders;
@@ -710,14 +709,16 @@ public class Plant : MonoBehaviour
 
         if (ignoredParent == null)
         {
-            var isOccupied = Physics.CheckCapsule(start, end, radius, occupied);
+            var isOccupied =
+                Physics.CheckCapsule(start, end, radius, occupied, QueryTriggerInteraction.Ignore);
             return isOccupied == false;
         }
 
         /*
          * If we need to check for an ignored parent, find a single collider.
          */
-        var count = Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, occupied);
+        var count = Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, occupied,
+            QueryTriggerInteraction.Ignore);
         for (var i = 0; i < count; i++)
         {
             if (ColliderCache[i].gameObject != ignoredParent)
@@ -743,7 +744,8 @@ public class Plant : MonoBehaviour
         radius *= template.SurfaceDistance;
 
         var count =
-            Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.SurfaceLayers);
+            Physics.OverlapCapsuleNonAlloc(start, end, radius, ColliderCache, template.SurfaceLayers,
+                QueryTriggerInteraction.Ignore);
         for (var i = 0; i < count; i++)
         {
             /*

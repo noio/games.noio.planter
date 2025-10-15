@@ -31,15 +31,18 @@ public class PlantInspector : UnityEditor.Editor
     Vector3 _lastPosition;
     Quaternion _lastRotation;
     bool _locked;
+    bool _forceGrow;
     Button _lockButton;
 
     #region MONOBEHAVIOUR METHODS
 
     void OnEnable()
     {
-        _plant = target as Plant;
+        _plant = (Plant)target;
 
-        _locked = true;
+        _locked = _plant.transform.childCount > 0;
+
+        _forceGrow = _plant.transform.childCount == 0;
 
         _seedProp = serializedObject.FindProperty("_seed");
         _speciesProp = serializedObject.FindProperty("_species");
@@ -74,6 +77,8 @@ public class PlantInspector : UnityEditor.Editor
 
         _lockButton = tree.Q<Button>("regrow-lock");
         _lockButton.clicked += () => ToggleLock();
+        UpdateLockButtonIcon();
+        
 
         _speciesInspector = tree.Q<VisualElement>("species-inspector");
         _speciesField = tree.Q<ObjectField>("species-field");
@@ -117,6 +122,11 @@ public class PlantInspector : UnityEditor.Editor
     void ToggleLock()
     {
         _locked = !_locked;
+        UpdateLockButtonIcon();
+    }
+
+    void UpdateLockButtonIcon()
+    {
         if (_locked)
         {
             _lockButton.RemoveFromClassList("regrow-unlocked");
@@ -176,12 +186,14 @@ public class PlantInspector : UnityEditor.Editor
          * editor becoming less responsive.
          */
 
-        if (time > _plantRegrowTime)
+        if (time > _plantRegrowTime || _forceGrow)
         {
             Undo.RecordObject(this, $"Regrow {_plant.name}");
             _plant.Regrow();
             _plantRegrowTime = double.PositiveInfinity; // removes delay
         }
+
+        _forceGrow = false;
     }
 
     static void SetVisibleIfEnumEquals(
