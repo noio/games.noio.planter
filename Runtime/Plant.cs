@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Assertions;
 using UnityEngine.Events;
 using Random = UnityEngine.Random;
 
@@ -35,7 +36,7 @@ public class Plant : MonoBehaviour
     [Tooltip("Keep 'Branch' components on individual branches after simulation is over")]
     [SerializeField]
     bool _keepBranchComponents;
-    
+
     [Tooltip("Put all branches directly under the plant parent when done growing")]
     [SerializeField]
     bool _flattenHierarchy;
@@ -71,7 +72,7 @@ public class Plant : MonoBehaviour
     public IReadOnlyList<BranchType> BranchTypes => _branchTypes;
     public Vector3 GrownAtPosition => _grownAtPosition;
     public Quaternion GrownAtRotation => _grownAtRotation;
-    public Branch RootBranch => _rootBranch; 
+    public Branch RootBranch => _rootBranch;
 
     #endregion
 
@@ -98,8 +99,8 @@ public class Plant : MonoBehaviour
                 break;
             }
             case PlantState.Done:
-                break;
             case PlantState.MissingData:
+            case PlantState.Invalid:
                 break;
             default:
                 _state = PlantState.Done;
@@ -170,9 +171,10 @@ public class Plant : MonoBehaviour
         PreprocessBranchType(_species.RootBranch);
 
         CreateRootBranch();
-        
+
         // Debug.Log($"{StringJoin(_branches, ",")}");
 
+        Assert.IsTrue(_branches[0] != null);
         _branchesWithOpenSockets.Enqueue(_branches[0]);
         _nextSocketIndex = 0;
 
@@ -193,27 +195,28 @@ public class Plant : MonoBehaviour
          */
         _state = PlantState.Done;
     }
-    
+
     public static string StringJoin<T>(
         IEnumerable<T> items,
-        string              separator = ", ",
-        string              format    = "{0}")
+        string separator = ", ",
+        string format = "{0}"
+    )
     {
         if (items == null)
         {
             return "NULL";
         }
+
         return string.Join(separator, items.Select(i => string.Format(format, i)));
     }
 
-
     static void ClearChildren(Transform parent)
     {
-        // Debug.Log($"Clearing children of {parent}, has {parent.childCount} children");
         for (var i = parent.childCount - 1; i >= 0; i--)
         {
             // Debug.Log($"Getting child {i}");
             var child = parent.GetChild(i);
+
             // Debug.Log($"F{Time.frameCount} Destroying {child}",child);
             DestroyImmediate(child.gameObject);
         }
@@ -268,6 +271,11 @@ public class Plant : MonoBehaviour
 
         foreach (var branch in GetComponentsInChildren<Branch>())
         {
+            if (branch == null)
+            {
+                continue;
+            }
+
             var branchType = BranchTypes.FirstOrDefault(bt => bt.Template == branch.Template);
             if (branchType == null)
             {
@@ -294,8 +302,9 @@ public class Plant : MonoBehaviour
 
     void ClearCache()
     {
+
         _rootBranch = null;
-        
+
         _branchTypes?.Clear();
         _branchTypes ??= new List<BranchType>();
 
@@ -418,7 +427,7 @@ public class Plant : MonoBehaviour
     bool Grow()
     {
         var attempts = GrowAttemptsPerFrame;
-        while (_state != PlantState.Done && attempts-- > 0)
+        while (_state == PlantState.Growing && attempts-- > 0)
         {
             var branch = FindBranchToGrow();
             if (branch != null)
@@ -437,6 +446,8 @@ public class Plant : MonoBehaviour
 
     Branch FindBranchToGrow()
     {
+        // Debug.Log($"BranchesWithOpen: {StringJoin(_branchesWithOpenSockets)}");
+
         if (_branches.Count >= _species.MaxTotalBranches)
         {
             OnGrowComplete();
@@ -474,9 +485,21 @@ public class Plant : MonoBehaviour
                  */
                 _nextSocketIndex = 0;
                 _branchesWithOpenSockets.Dequeue();
-                _branchesWithOpenSockets.Enqueue(parent);
+                if (parent != null)
+                {
+                    _branchesWithOpenSockets.Enqueue(parent);
+                }
+
                 parent = _branchesWithOpenSockets.Peek();
             }
+        }
+
+        if (parent == null)
+        {
+            Debug.LogWarning("Found a null branch. Starting from scratch.");
+            ResetPlant();
+            _state = PlantState.Growing;
+            return null;
         }
 
         var depth = parent.Depth + 1;
@@ -543,7 +566,7 @@ public class Plant : MonoBehaviour
          * rotation (relative to the parent socket)
          */
         // Debug.Log($"F{Time.frameCount} Checking parent: {parent}");
-        
+
         var pivot = Quaternion.Euler(xRot, yRot, 0);
         var globalRot = parent.transform.rotation * socketLocalRot * pivot;
         var globalPos = parent.transform.TransformPoint(socketLocalPos);
@@ -633,13 +656,14 @@ public class Plant : MonoBehaviour
     /// </summary>
     void CleanupOnDone()
     {
+        // Debug.Log("CLEANING");
         foreach (var branch in _branches)
         {
             if (branch == null)
             {
                 continue;
             }
-            
+
             if (_keepColliders == false && branch.TryGetComponent(out CapsuleCollider capsule))
             {
                 DestroyImmediate(capsule);
@@ -858,7 +882,7 @@ public class Plant : MonoBehaviour
 
     void CreateRootBranch()
     {
-        if (_species?.RootBranch != null && _rootBranch == null)
+        if (_species?.RootBranch != null && (_rootBranch == null || _branches[0] == null))
         {
             _rootBranch = AddBranch(null, 0, BranchTypes[0], Vector3.zero, Quaternion.Euler(-90, 0, 0));
         }
@@ -930,5 +954,6 @@ public enum PlantState
 {
     MissingData,
     Growing,
-    Done
+    Done,
+    Invalid
 }
