@@ -35,6 +35,10 @@ public class Plant : MonoBehaviour
     [Tooltip("Keep 'Branch' components on individual branches after simulation is over")]
     [SerializeField]
     bool _keepBranchComponents;
+    
+    [Tooltip("Put all branches directly under the plant parent when done growing")]
+    [SerializeField]
+    bool _flattenHierarchy;
 
     [SerializeField] Branch _rootBranch;
     [SerializeField] PlantSpecies _species;
@@ -67,6 +71,7 @@ public class Plant : MonoBehaviour
     public IReadOnlyList<BranchType> BranchTypes => _branchTypes;
     public Vector3 GrownAtPosition => _grownAtPosition;
     public Quaternion GrownAtRotation => _grownAtRotation;
+    public Branch RootBranch => _rootBranch; 
 
     #endregion
 
@@ -127,7 +132,7 @@ public class Plant : MonoBehaviour
 #endif
     }
 
-    void ResetPlant()
+    public void ResetPlant()
     {
         CheckSetup();
 
@@ -165,6 +170,8 @@ public class Plant : MonoBehaviour
         PreprocessBranchType(_species.RootBranch);
 
         CreateRootBranch();
+        
+        // Debug.Log($"{StringJoin(_branches, ",")}");
 
         _branchesWithOpenSockets.Enqueue(_branches[0]);
         _nextSocketIndex = 0;
@@ -186,12 +193,28 @@ public class Plant : MonoBehaviour
          */
         _state = PlantState.Done;
     }
+    
+    public static string StringJoin<T>(
+        IEnumerable<T> items,
+        string              separator = ", ",
+        string              format    = "{0}")
+    {
+        if (items == null)
+        {
+            return "NULL";
+        }
+        return string.Join(separator, items.Select(i => string.Format(format, i)));
+    }
+
 
     static void ClearChildren(Transform parent)
     {
+        // Debug.Log($"Clearing children of {parent}, has {parent.childCount} children");
         for (var i = parent.childCount - 1; i >= 0; i--)
         {
+            // Debug.Log($"Getting child {i}");
             var child = parent.GetChild(i);
+            // Debug.Log($"F{Time.frameCount} Destroying {child}",child);
             DestroyImmediate(child.gameObject);
         }
     }
@@ -271,6 +294,8 @@ public class Plant : MonoBehaviour
 
     void ClearCache()
     {
+        _rootBranch = null;
+        
         _branchTypes?.Clear();
         _branchTypes ??= new List<BranchType>();
 
@@ -287,7 +312,7 @@ public class Plant : MonoBehaviour
     bool IsCacheValid()
     {
         return _branchTypes != null && _branchTypes.Count > 0 &&
-               _branches != null && _branches.Count > 0;
+               _branches != null && _branches.Count > 0 && _branches[0] != null;
     }
 
     /// <summary>
@@ -393,7 +418,7 @@ public class Plant : MonoBehaviour
     bool Grow()
     {
         var attempts = GrowAttemptsPerFrame;
-        while (attempts-- > 0)
+        while (_state != PlantState.Done && attempts-- > 0)
         {
             var branch = FindBranchToGrow();
             if (branch != null)
@@ -517,6 +542,8 @@ public class Plant : MonoBehaviour
          * When we create a branch we transform it back to a local
          * rotation (relative to the parent socket)
          */
+        // Debug.Log($"F{Time.frameCount} Checking parent: {parent}");
+        
         var pivot = Quaternion.Euler(xRot, yRot, 0);
         var globalRot = parent.transform.rotation * socketLocalRot * pivot;
         var globalPos = parent.transform.TransformPoint(socketLocalPos);
@@ -592,7 +619,7 @@ public class Plant : MonoBehaviour
              * Do this one frame later in case we created some colliders in this
              * frame still.
              */
-            EditorApplication.delayCall += RemoveUnwantedComponents;
+            EditorApplication.delayCall += CleanupOnDone;
         }
 #endif
 
@@ -604,10 +631,15 @@ public class Plant : MonoBehaviour
     ///     Remove "CapsuleCollider" and "Branch" components
     ///     from all branches.
     /// </summary>
-    void RemoveUnwantedComponents()
+    void CleanupOnDone()
     {
         foreach (var branch in _branches)
         {
+            if (branch == null)
+            {
+                continue;
+            }
+            
             if (_keepColliders == false && branch.TryGetComponent(out CapsuleCollider capsule))
             {
                 DestroyImmediate(capsule);
@@ -619,9 +651,18 @@ public class Plant : MonoBehaviour
             }
         }
 
+        foreach (var child in GetComponentsInChildren<Transform>())
+        {
+            if (transform != child)
+            {
+                child.parent = transform;
+            }
+        }
+
         if (_keepBranchComponents == false)
         {
             _branches.Clear();
+            _rootBranch = null;
         }
     }
 

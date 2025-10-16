@@ -26,12 +26,16 @@
     overflow: hidden;
 }
 
-#regrow-lock{
-    background-image: resource("IN LockButton on@2x")
+#regrow-lock {
+    background-image: resource('IN LockButton on@2x');
 }
 
-#regrow-lock.regrow-unlocked
-{
-    background-image: resource("IN LockButton act@2x")
-    
+#regrow-lock.regrow-unlocked {
+    background-image: resource('IN LockButton act@2x');
+}
+
+#auto-grow-button.active {
+    background-color: rgb(58, 190, 59);
+    -unity-background-image-tint-color: rgb(228, 250, 223);
+    background-image: url("project://database/Assets/Packages/games.noio.planter/Editor/leaf-icon.png?fileID=2800000&guid=fa68d1dc7ee004188b237ee1d9d9e56f&type=3#leaf-icon");
 }

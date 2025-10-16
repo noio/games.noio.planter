@@ -24,14 +24,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3468566798080261058}
+  serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 8.877432, y: 1.9572072, z: 5.2649965}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
-  - {fileID: 2529843074397798048}
+  m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &7208685406077519677
 MonoBehaviour:
@@ -45,49 +44,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3c738616f284f4eb9899593d0ce40fed, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _restartWhenMoved: 1
-  _rootTransform: {fileID: 2529843074397798048}
+  _seed: 0
+  _keepColliders: 0
+  _keepBranchComponents: 0
+  _flattenHierarchy: 1
+  _rootBranch: {fileID: 0}
   _species: {fileID: 11400000, guid: b597ad116939841bb8cd4d5a25975cda, type: 2}
+  _randomState:
+    s0: 0
+    s1: 1
+    s2: 1812433254
+    s3: 1900727103
   _state: 2
-  _grownAtLocation: {x: 4.02, y: 4.54, z: -0.20016766}
+  _grownAtPosition: {x: 8.877432, y: 1.9572072, z: 5.2649965}
   _grownAtRotation: {x: 0, y: 0, z: 0, w: 1}
-  _growSucceeded: 10
-  _growFailed: 20691
-  _difficulty: 0.61338913
+  _growSucceeded: 0
+  _growFailed: 0
+  _difficulty: 0
   _growStarted:
     m_PersistentCalls:
       m_Calls: []
   _growComplete:
     m_PersistentCalls:
       m_Calls: []
---- !u!1 &7581809814448019023
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2529843074397798048}
-  m_Layer: 0
-  m_Name: Root Transform
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &2529843074397798048
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7581809814448019023}
-  m_LocalRotation: {x: -0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 596614908198769114}
-  m_RootOrder: -1
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

@@ -3,6 +3,7 @@
 
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -31,8 +32,9 @@ public class PlantInspector : UnityEditor.Editor
     Vector3 _lastPosition;
     Quaternion _lastRotation;
     bool _locked;
-    bool _forceGrow;
-    Button _lockButton;
+    bool _forceGrowOnEnable;
+    Button _autoGrowButton;
+    bool _isEditingPrefab;
 
     #region MONOBEHAVIOUR METHODS
 
@@ -40,9 +42,15 @@ public class PlantInspector : UnityEditor.Editor
     {
         _plant = (Plant)target;
 
-        _locked = _plant.transform.childCount > 0;
+        /*
+         * If we have a root AND that root has children:
+         * we lock.
+         */
+        var transform = _plant.transform;
+        _locked = transform.childCount > 1 ||
+                  (transform.childCount == 1 && transform.GetChild(0).childCount > 0);
 
-        _forceGrow = _plant.transform.childCount == 0;
+        _forceGrowOnEnable = _locked == false;
 
         _seedProp = serializedObject.FindProperty("_seed");
         _speciesProp = serializedObject.FindProperty("_species");
@@ -52,8 +60,13 @@ public class PlantInspector : UnityEditor.Editor
 
         _plantRegrowTime = double.PositiveInfinity;
 
-        EditorApplication.update -= EditorUpdate;
-        EditorApplication.update += EditorUpdate;
+        _isEditingPrefab = IsEditingPrefab();
+
+        if (_isEditingPrefab == false)
+        {
+            EditorApplication.update -= EditorUpdate;
+            EditorApplication.update += EditorUpdate;
+        }
     }
 
     void OnDisable()
@@ -74,11 +87,16 @@ public class PlantInspector : UnityEditor.Editor
 
         var restartButton = tree.Q<Button>("restart-button");
         restartButton.clicked += () => _plant.Regrow();
+        restartButton.SetEnabled(_isEditingPrefab == false);
 
-        _lockButton = tree.Q<Button>("regrow-lock");
-        _lockButton.clicked += () => ToggleLock();
+        _autoGrowButton = tree.Q<Button>("auto-grow-button");
+        _autoGrowButton.clicked += () => ToggleLock();
+        _autoGrowButton.SetEnabled(_isEditingPrefab == false);
         UpdateLockButtonIcon();
-        
+
+        var createRootButton = tree.Q<Button>("create-root-button");
+        createRootButton.clicked += () => CreateRootInPrefab();
+        createRootButton.visible = _isEditingPrefab;
 
         _speciesInspector = tree.Q<VisualElement>("species-inspector");
         _speciesField = tree.Q<ObjectField>("species-field");
@@ -119,6 +137,54 @@ public class PlantInspector : UnityEditor.Editor
         return tree;
     }
 
+    void CreateRootInPrefab()
+    {
+        // _plant.
+        _plant.ResetPlant();
+        Undo.RecordObject(_plant.RootBranch, "Create Root");
+        _plant.RootBranch.name = "ROOT";
+    }
+
+    bool IsEditingPrefab()
+    {
+        // Prefab asset (in Project Browser)
+        if (PrefabUtility.IsPartOfPrefabAsset(_plant))
+        {
+            // Debug.Log("Editing ASSET");
+            return true;
+        }
+
+        var stage = PrefabStageUtility.GetCurrentPrefabStage();
+        if (stage == null)
+        {
+            // Debug.Log("Not in prefab stage");
+            return false; // normal scene, always fine
+        }
+
+        /*
+         * We're in some prefab stage
+         */
+        if (PrefabUtility.IsAnyPrefabInstanceRoot(_plant.gameObject))
+        {
+            // Debug.Log("IsAnyPrefabInstanceRoot");
+            /*
+             * This object is an INSTANCE in the prefab stage.
+             */
+            return false;
+        }
+
+        if (stage.prefabContentsRoot == _plant.gameObject)
+        {
+            // Debug.Log("stage.prefabContentsRoot == gameObject");
+
+            // This is the root prefab being edited
+            return true;
+        }
+
+        // Debug.Log("stage.prefabContentsRoot != gameObject (so, instance?)");
+        return false;
+    }
+
     void ToggleLock()
     {
         _locked = !_locked;
@@ -129,11 +195,11 @@ public class PlantInspector : UnityEditor.Editor
     {
         if (_locked)
         {
-            _lockButton.RemoveFromClassList("regrow-unlocked");
+            _autoGrowButton.RemoveFromClassList("active");
         }
         else
         {
-            _lockButton.AddToClassList("regrow-unlocked");
+            _autoGrowButton.AddToClassList("active");
         }
     }
 
@@ -186,14 +252,14 @@ public class PlantInspector : UnityEditor.Editor
          * editor becoming less responsive.
          */
 
-        if (time > _plantRegrowTime || _forceGrow)
+        if (time > _plantRegrowTime || _forceGrowOnEnable)
         {
             Undo.RecordObject(this, $"Regrow {_plant.name}");
             _plant.Regrow();
             _plantRegrowTime = double.PositiveInfinity; // removes delay
         }
 
-        _forceGrow = false;
+        _forceGrowOnEnable = false;
     }
 
     static void SetVisibleIfEnumEquals(

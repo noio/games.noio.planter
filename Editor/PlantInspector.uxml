@@ -6,11 +6,13 @@
         <ui:Button text="++" display-tooltip-when-elided="true" name="increment-seed-button" />
     </ui:VisualElement>
     <ui:VisualElement style="flex-grow: 0; height: 42px; flex-direction: row;">
-        <ui:Button display-tooltip-when-elided="true" name="regrow-lock" icon-image="IN LockButton on@2x" style="flex-direction: row; justify-content: center; align-items: center; align-self: stretch; flex-grow: 0; height: 34px; margin-bottom: 5px; margin-top: 5px; width: 34px; -unity-background-scale-mode: stretch-to-fill; background-size: 32px 32px;" />
+        <ui:Button display-tooltip-when-elided="true" name="auto-grow-button" tooltip="Automatically regrow the plant after moving the object" style="flex-direction: row; justify-content: center; align-items: center; align-self: stretch; flex-grow: 0; height: 34px; margin-bottom: 5px; margin-top: 5px; width: 34px; -unity-background-scale-mode: stretch-to-fill; background-size: 24px 24px; background-image: url(&quot;project://database/Assets/Packages/games.noio.planter/Editor/leaf-icon.png?fileID=2800000&amp;guid=fa68d1dc7ee004188b237ee1d9d9e56f&amp;type=3#leaf-icon&quot;); -unity-background-image-tint-color: rgb(124, 255, 93);" />
         <ui:Button display-tooltip-when-elided="true" text="Regrow" name="restart-button" style="flex-direction: row; justify-content: center; align-items: center; align-self: stretch; flex-grow: 1; height: 34px; margin-bottom: 5px; margin-top: 5px;" />
     </ui:VisualElement>
     <ui:Toggle label="Keep Colliders" binding-path="_keepColliders" name="keep-colliders-toggle" class="unity-base-field__aligned" />
     <ui:Toggle label="Keep Branch Components" binding-path="_keepBranchComponents" name="keep-branch-components-toggle" class="unity-base-field__aligned" />
+    <ui:Toggle label="Flatten Hierarchy" binding-path="_flattenHierarchy" name="flatten-hierarchy-toggle" class="unity-base-field__aligned" />
+    <ui:Button display-tooltip-when-elided="true" text="Create Root for Prefab" name="create-root-button" enabled="true" style="flex-direction: row; justify-content: center; align-items: center; align-self: stretch; height: 24px; margin-top: 8px; margin-bottom: 0; display: none;" />
     <ui:VisualElement class="section-box" style="flex-grow: 1;">
         <ui:VisualElement style="flex-grow: 0; background-color: rgb(91, 91, 91); flex-direction: row; margin-right: -8px; margin-left: -2px; justify-content: flex-start; align-items: center;">
             <uie:ObjectField label="Species" name="species-field" binding-path="_species" type="games.noio.planter.PlantSpecies, games.noio.planter" class="unity-base-field__aligned" style="margin-bottom: 0; background-color: rgb(91, 91, 91); padding-left: 3px; padding-right: 3px; padding-top: 3px; padding-bottom: 3px; margin-left: 0; margin-right: 0; margin-top: 0; border-top-width: 0; border-top-left-radius: 2px; border-top-right-radius: 2px; border-bottom-left-radius: 0; border-bottom-right-radius: 0; flex-grow: 1; flex-shrink: 1;" />
@@ -24,6 +26,7 @@
             <ui:Label tabindex="-1" text="Status: Growing" display-tooltip-when-elided="true" name="growing-label" class="status-bar" style="background-color: rgba(113, 221, 108, 0.55); display: none;" />
             <ui:Label tabindex="-1" text="Status: Missing Data" display-tooltip-when-elided="true" name="missing-data-label" class="status-bar" style="background-color: rgba(221, 85, 85, 0.55); display: none;" />
         </ui:VisualElement>
+        <uie:ObjectField label="Root Branch" name="root-branch" enabled="false" binding-path="_rootBranch" />
         <ui:ProgressBar value="0.8" title="Difficulty" binding-path="_difficulty" high-value="1" class="difficult-bar" />
         <ui:VisualElement name="branch-status" style="flex-grow: 1; background-color: rgba(0, 0, 0, 0);" />
     </ui:VisualElement>
